@@ -4,6 +4,18 @@ import { v4 as uuidv4 } from 'uuid';
 import { GarageConfig, GateConfig, MaterialConfig, RoofSlopeType, ProfileType, WallSide } from './types';
 import { DEFAULT_SETTINGS } from '@/config/settings';
 
+const defaultGate: GateConfig = {
+  id:            uuidv4(),
+  type:          'tilt',
+  wall:          'front',
+  width:         DEFAULT_SETTINGS.gate.width.default,
+  height:        DEFAULT_SETTINGS.gate.height.default,
+  positionX:     0.3,
+  openDirection: 'left',
+  color:         '#c7c7c7',
+  material:      null,
+};
+
 // ─── Default values ────────────────────────────────────────────────────────────
 const defaultMaterial: MaterialConfig = {
   type: 'trapez',
@@ -21,7 +33,7 @@ const defaultConfig: GarageConfig = {
     pitch: DEFAULT_SETTINGS.roofPitch.default,
     material: null,
   },
-  gates: [],
+  gates: [defaultGate],
   construction: {
     material: { ...defaultMaterial },
     profileType: '30x40',

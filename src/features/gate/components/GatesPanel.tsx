@@ -14,6 +14,13 @@ import { GateConfig, GateType, OpenDirection } from '@/store/types';
 const GATE_TYPE_ICONS: Record<GateType, string> = {
   tilt:          '⬆',
   'double-wing': '⬌',
+  sectional:     '▤',
+};
+
+const GATE_TYPE_SHORT_LABELS: Record<GateType, string> = {
+  tilt: 'Uchylna',
+  'double-wing': 'Dwuskrz.',
+  sectional: 'Segment.',
 };
 
 function GateEditor({ gate }: { gate: GateConfig }) {
@@ -51,7 +58,7 @@ function GateEditor({ gate }: { gate: GateConfig }) {
           onClick={() => setOpen(o => !o)}
         >
           {open ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-          Brama {gate.type === 'double-wing' ? 'Dwuskrz.' : 'Uchylna'}
+          Brama {GATE_TYPE_SHORT_LABELS[gate.type]}
           <span className="text-xs text-slate-500 font-mono">
             {gate.width.toFixed(1)}×{gate.height.toFixed(1)}m
           </span>
@@ -73,7 +80,7 @@ function GateEditor({ gate }: { gate: GateConfig }) {
             value={gate.type}
             options={gateTypeOptions}
             onChange={v => updateGate(gate.id, { type: v })}
-            columns={2}
+            columns={3}
           />
 
           <ConfigSlider
@@ -121,6 +128,7 @@ function GateEditor({ gate }: { gate: GateConfig }) {
               <input
                 type="color"
                 value={gate.color}
+                aria-label="Wybierz kolor bramy"
                 onChange={e => updateGate(gate.id, { color: e.target.value })}
                 className="w-8 h-8 rounded cursor-pointer border border-slate-600 bg-transparent"
               />

@@ -149,12 +149,7 @@ function buildDouble(W: number, H: number, D: number, pitchDeg: number, oh: numb
     new THREE.Vector3(ridgeH, W/2 + oh, 0).normalize(),
   );
 
-  // Front gable triangle (Z = +halfD)
-  const frontGeo = gableTriangle(W, H, ridgeH, oh, halfD, 1);
-  // Back gable triangle (Z = -halfD)
-  const backGeo  = gableTriangle(W, H, ridgeH, oh, -halfD, -1);
-
-  return merge([leftSlope, rightSlope, frontGeo, backGeo]);
+  return merge([leftSlope, rightSlope]);
 }
 
 function gableTriangle(W: number, H: number, ridgeH: number, oh: number, z: number, dir: number): THREE.BufferGeometry {
@@ -194,51 +189,152 @@ function buildSingle(
   const slopeH  = pitchToHeight(span, pitchDeg);
   const slopeLen = Math.sqrt(span ** 2 + slopeH ** 2);
 
-  // low edge Y = H, high edge Y = H + slopeH
-  // U: along the ridge direction (ext), V: down the slope (slopeLen)
+  // Vertex order is chosen so that quad() indices [0,2,1, 0,3,2] produce
+  // a CCW winding with the outward normal pointing UP from the roof surface.
+  // U: along the ext direction, V: along the slope (0 = high edge, slopeLen = eave)
   let v0: THREE.Vector3, v1: THREE.Vector3, v2: THREE.Vector3, v3: THREE.Vector3;
   let normal: THREE.Vector3;
+  let uvs: [number, number, number, number, number, number, number, number];
 
   const hE = ext / 2;
   const hS = span / 2;
 
   switch (dir) {
     case 'right': // high on right (+X), low on left (-X)
-      v0 = new THREE.Vector3(-hS, H,     -hE);
-      v1 = new THREE.Vector3( hS, H + slopeH, -hE);
-      v2 = new THREE.Vector3( hS, H + slopeH,  hE);
-      v3 = new THREE.Vector3(-hS, H,      hE);
-      normal = new THREE.Vector3(slopeH, span, 0).normalize();
+      // Outward normal: (-slopeH, +span, 0) — up and slightly left
+      v0 = new THREE.Vector3(-hS, H,           hE);
+      v1 = new THREE.Vector3(-hS, H,          -hE);
+      v2 = new THREE.Vector3( hS, H + slopeH, -hE);
+      v3 = new THREE.Vector3( hS, H + slopeH,  hE);
+      normal = new THREE.Vector3(-slopeH, span, 0).normalize();
+      uvs = [uv(0), uv(slopeLen), uv(ext), uv(slopeLen), uv(ext), uv(0), uv(0), uv(0)];
       break;
     case 'left': // high on left (-X), low on right (+X)
-      v0 = new THREE.Vector3(-hS, H + slopeH, -hE);
-      v1 = new THREE.Vector3( hS, H,          -hE);
-      v2 = new THREE.Vector3( hS, H,           hE);
-      v3 = new THREE.Vector3(-hS, H + slopeH,  hE);
-      normal = new THREE.Vector3(-slopeH, span, 0).normalize();
+      // Outward normal: (+slopeH, +span, 0) — up and slightly right
+      v0 = new THREE.Vector3(-hS, H + slopeH,  hE);
+      v1 = new THREE.Vector3(-hS, H + slopeH, -hE);
+      v2 = new THREE.Vector3( hS, H,          -hE);
+      v3 = new THREE.Vector3( hS, H,           hE);
+      normal = new THREE.Vector3(slopeH, span, 0).normalize();
+      uvs = [uv(0), uv(0), uv(ext), uv(0), uv(ext), uv(slopeLen), uv(0), uv(slopeLen)];
       break;
     case 'back': // high at back (-Z), low at front (+Z)
-      v0 = new THREE.Vector3(-hE, H,          hS);
-      v1 = new THREE.Vector3( hE, H,          hS);
-      v2 = new THREE.Vector3( hE, H + slopeH, -hS);
-      v3 = new THREE.Vector3(-hE, H + slopeH, -hS);
+      // Outward normal: (0, +span, +slopeH) — up and slightly front
+      v0 = new THREE.Vector3( hE, H,            hS);
+      v1 = new THREE.Vector3(-hE, H,            hS);
+      v2 = new THREE.Vector3(-hE, H + slopeH,  -hS);
+      v3 = new THREE.Vector3( hE, H + slopeH,  -hS);
       normal = new THREE.Vector3(0, span, slopeH).normalize();
+      uvs = [uv(0), uv(slopeLen), uv(ext), uv(slopeLen), uv(ext), uv(0), uv(0), uv(0)];
       break;
     case 'front': // high at front (+Z), low at back (-Z)
     default:
-      v0 = new THREE.Vector3(-hE, H + slopeH,  hS);
-      v1 = new THREE.Vector3( hE, H + slopeH,  hS);
-      v2 = new THREE.Vector3( hE, H,           -hS);
-      v3 = new THREE.Vector3(-hE, H,           -hS);
+      // Outward normal: (0, +span, -slopeH) — up and slightly back
+      v0 = new THREE.Vector3( hE, H + slopeH,  hS);
+      v1 = new THREE.Vector3(-hE, H + slopeH,  hS);
+      v2 = new THREE.Vector3(-hE, H,           -hS);
+      v3 = new THREE.Vector3( hE, H,           -hS);
       normal = new THREE.Vector3(0, span, -slopeH).normalize();
+      uvs = [uv(0), uv(0), uv(ext), uv(0), uv(ext), uv(slopeLen), uv(0), uv(slopeLen)];
       break;
   }
 
-  return quad(
-    [v0, v1, v2, v3],
-    [uv(0), uv(0),  uv(ext), uv(0),  uv(ext), uv(slopeLen),  uv(0), uv(slopeLen)],
-    normal,
-  );
+  return quad([v0, v1, v2, v3], uvs, normal);
+}
+
+/**
+ * Build the triangular end-fills for any roof type.
+ * These sit above the rectangular walls and should be rendered with wall material.
+ * Returns null when no end-fill triangles are needed (flat roof).
+ */
+export function buildGableGeometry(
+  dim: GarageDimensions,
+  slopeType: RoofSlopeType,
+  pitchDeg: number,
+): THREE.BufferGeometry | null {
+  const { width: W, height: H, depth: D } = dim;
+  const oh = ROOF_OVERHANG;
+
+  switch (slopeType) {
+    case 'double': {
+      const ridgeH = pitchToHeight(W / 2, pitchDeg);
+      const halfD  = D / 2 + oh;
+      return merge([
+        gableTriangle(W, H, ridgeH, oh, halfD, 1),
+        gableTriangle(W, H, ridgeH, oh, -halfD, -1),
+      ]);
+    }
+    case 'right':
+    case 'left': {
+      // Single slope along X — triangular ends on front (Z=+halfD) and back (Z=-halfD)
+      const span   = W + oh * 2;
+      const slopeH = pitchToHeight(span, pitchDeg);
+      const halfD  = D / 2 + oh;
+      const halfW  = W / 2 + oh;
+      // For 'right': low at X=-halfW, high at X=+halfW
+      // For 'left':  low at X=+halfW, high at X=-halfW
+      const lowX  = slopeType === 'right' ? -halfW :  halfW;
+      const highX = slopeType === 'right' ?  halfW : -halfW;
+
+      const endTriangle = (z: number, normalDir: number): THREE.BufferGeometry => {
+        const vLow  = new THREE.Vector3(lowX,  H,          z);
+        const vHigh = new THREE.Vector3(highX, H + slopeH, z);
+        const vBase = new THREE.Vector3(highX, H,          z);
+        const normal = new THREE.Vector3(0, 0, normalDir);
+        const geo = new THREE.BufferGeometry();
+        const verts = normalDir > 0 ? [vLow, vBase, vHigh] : [vBase, vLow, vHigh];
+        geo.setAttribute('position', new THREE.Float32BufferAttribute(
+          verts.flatMap(v => [v.x, v.y, v.z]), 3));
+        geo.setAttribute('uv', new THREE.Float32BufferAttribute([
+          uv(0), uv(0),
+          uv(span), uv(0),
+          uv(span), uv(slopeH),
+        ], 2));
+        geo.setAttribute('normal', new THREE.Float32BufferAttribute(
+          [normal.x, normal.y, normal.z, normal.x, normal.y, normal.z, normal.x, normal.y, normal.z], 3));
+        geo.setIndex([0, 1, 2]);
+        return geo;
+      };
+
+      return merge([endTriangle(halfD, 1), endTriangle(-halfD, -1)]);
+    }
+    case 'front':
+    case 'back': {
+      // Single slope along Z — triangular ends on left (X=-halfW) and right (X=+halfW)
+      const span   = D + oh * 2;
+      const slopeH = pitchToHeight(span, pitchDeg);
+      const halfW  = W / 2 + oh;
+      const halfD  = D / 2 + oh;
+      // For 'front': high at Z=+halfD, low at Z=-halfD
+      // For 'back':  high at Z=-halfD, low at Z=+halfD
+      const lowZ  = slopeType === 'front' ? -halfD :  halfD;
+      const highZ = slopeType === 'front' ?  halfD : -halfD;
+
+      const endTriangle = (x: number, normalDir: number): THREE.BufferGeometry => {
+        const vLow  = new THREE.Vector3(x, H,          lowZ);
+        const vHigh = new THREE.Vector3(x, H + slopeH, highZ);
+        const vBase = new THREE.Vector3(x, H,          highZ);
+        const normal = new THREE.Vector3(normalDir, 0, 0);
+        const geo = new THREE.BufferGeometry();
+        const verts = normalDir > 0 ? [vBase, vLow, vHigh] : [vLow, vBase, vHigh];
+        geo.setAttribute('position', new THREE.Float32BufferAttribute(
+          verts.flatMap(v => [v.x, v.y, v.z]), 3));
+        geo.setAttribute('uv', new THREE.Float32BufferAttribute([
+          uv(0), uv(0),
+          uv(span), uv(0),
+          uv(span), uv(slopeH),
+        ], 2));
+        geo.setAttribute('normal', new THREE.Float32BufferAttribute(
+          [normal.x, normal.y, normal.z, normal.x, normal.y, normal.z, normal.x, normal.y, normal.z], 3));
+        geo.setIndex([0, 1, 2]);
+        return geo;
+      };
+
+      return merge([endTriangle(-halfW, -1), endTriangle(halfW, 1)]);
+    }
+    default:
+      return null;
+  }
 }
 
 /** Set UV repeat on a texture so it tiles at approx 1 tile per `tileSize` world units */

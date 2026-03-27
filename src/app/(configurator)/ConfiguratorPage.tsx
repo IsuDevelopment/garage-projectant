@@ -23,9 +23,28 @@ export default function ConfiguratorPage() {
   const { width: W, height: H, depth: D } = config.dimensions;
 
   return (
-    <div style={{ display: 'flex', height: '100vh', width: '100vw', overflow: 'hidden' }} className="bg-slate-950 font-sans">
+    <div className="flex min-h-[100dvh] w-full flex-col bg-slate-950 font-sans lg:h-screen lg:flex-row lg:overflow-hidden">
+      {/* ── 3D Viewport ───────────────────────────────────────────── */}
+      <main className="order-1 relative h-[52dvh] min-h-[320px] w-full overflow-hidden lg:order-2 lg:h-full lg:flex-1">
+        <GarageScene settings={DEFAULT_SETTINGS} />
+
+        {/* Camera hint overlay */}
+        <div className="pointer-events-none absolute bottom-3 left-1/2 hidden -translate-x-1/2 gap-3 sm:flex lg:bottom-4 lg:gap-4">
+          {[
+            { key: 'Przeciągnij', sub: 'Obróć' },
+            { key: 'Scroll', sub: 'Zoom' },
+            { key: 'Shift+Drag', sub: 'Pan' },
+          ].map(h => (
+            <div key={h.key} className="flex flex-col items-center rounded-lg bg-black/40 px-2.5 py-1.5 backdrop-blur-sm lg:px-3">
+              <span className="text-[10px] font-semibold text-white/80">{h.key}</span>
+              <span className="text-[9px] text-white/50">{h.sub}</span>
+            </div>
+          ))}
+        </div>
+      </main>
+
       {/* ── Left panel ────────────────────────────────────────────── */}
-      <aside style={{ width: '320px', minWidth: '288px', height: '100vh', display: 'grid', gridTemplateRows: 'auto 1fr auto', overflow: 'hidden', flexShrink: 0 }} className="bg-slate-950 border-r border-slate-800">
+      <aside className="order-2 w-full border-t border-slate-800 bg-slate-950 lg:order-1 lg:h-full lg:min-w-[288px] lg:w-[320px] lg:flex-shrink-0 lg:border-r lg:border-t-0 lg:grid lg:grid-rows-[auto_1fr_auto] lg:overflow-hidden">
         {/* Header */}
         <div className="px-5 py-4 border-b border-slate-800">
           <h1 className="text-base font-bold text-white tracking-tight">
@@ -37,7 +56,7 @@ export default function ConfiguratorPage() {
         </div>
 
         {/* Sections — 1fr grid row, fully constrained */}
-        <div style={{ overflowY: 'scroll', minHeight: 0 }} className="p-3 flex flex-col gap-2.5 sidebar-scroll">
+        <div className="sidebar-scroll flex flex-col gap-2.5 p-3 lg:min-h-0 lg:overflow-y-scroll">
           <DimensionsPanel />
           <RoofPanel />
           <GatesPanel />
@@ -58,25 +77,6 @@ export default function ConfiguratorPage() {
           </button>
         </div>
       </aside>
-
-      {/* ── 3D Viewport ───────────────────────────────────────────── */}
-      <main style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-        <GarageScene settings={DEFAULT_SETTINGS} />
-
-        {/* Camera hint overlay */}
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-4 pointer-events-none">
-          {[
-            { key: 'Przeciągnij', sub: 'Obróć' },
-            { key: 'Scroll', sub: 'Zoom' },
-            { key: 'Shift+Drag', sub: 'Pan' },
-          ].map(h => (
-            <div key={h.key} className="flex flex-col items-center bg-black/40 backdrop-blur-sm px-3 py-1.5 rounded-lg">
-              <span className="text-[10px] font-semibold text-white/80">{h.key}</span>
-              <span className="text-[9px] text-white/50">{h.sub}</span>
-            </div>
-          ))}
-        </div>
-      </main>
     </div>
   );
 }

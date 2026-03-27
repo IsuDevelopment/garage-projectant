@@ -75,7 +75,7 @@ export const DEFAULT_SETTINGS: ConfiguratorSettings = {
 
   availableMaterials: ['trapez', 'blachodachowka', 'rabek'],
   availableRoofSlopes: ['right', 'left', 'back', 'front', 'double'],
-  availableGateTypes: ['tilt', 'double-wing'],
+  availableGateTypes: ['tilt', 'double-wing', 'sectional'],
   availableProfiles: ['30x30', '30x40'],
 
   roofPitch: { min: 5, max: 40, step: 1, default: 20, unit: '°', label: 'Kąt dachu' },
@@ -109,6 +109,7 @@ export const ROOF_SLOPE_LABELS: Record<string, string> = {
 export const GATE_TYPE_LABELS: Record<string, string> = {
   tilt:        'Uchylna',
   'double-wing': 'Dwuskrzydłowa',
+  sectional:   'Segmentowa',
 };
 
 // ─── Profile display ─────────────────────────────────────────────────────────

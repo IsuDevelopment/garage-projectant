@@ -1,19 +1,29 @@
 'use client';
 
+import { useMemo } from 'react';
 import { useConfigStore } from '@/store/useConfigStore';
 import { effectiveMaterial } from '@/features/materials/hooks/useSpriteMaterial';
 import { useSpriteMaterial } from '@/features/materials/hooks/useSpriteMaterial';
+import { buildGableGeometry } from '@/features/garage/utils/geometry';
 
 /** Renders garage walls and floor. Each wall is a thin box so corners don't z-fight. */
 export default function GarageWalls() {
   const dim           = useConfigStore(s => s.config.dimensions);
   const globalMat     = useConfigStore(s => s.config.construction.material);
+  const roof          = useConfigStore(s => s.config.roof);
   const { width: W, height: H, depth: D } = dim;
 
   // Wall thickness — just enough to avoid z-fighting at corners
   const t = 0.04;
 
   const wallMat = effectiveMaterial(null, globalMat);
+
+  // UV in gableGeometry is already pre-divided by TILE_SIZE, so tileSize=1 here
+  const gableGeo = useMemo(
+    () => buildGableGeometry(dim, roof.slopeType, roof.pitch),
+    [dim, roof.slopeType, roof.pitch],
+  );
+  const gableMat = useSpriteMaterial({ config: wallMat, worldWidth: 1, worldHeight: 1, tileSize: 1 });
 
   const frontMat = useSpriteMaterial({ config: wallMat, worldWidth: W, worldHeight: H });
   const backMat  = useSpriteMaterial({ config: wallMat, worldWidth: W, worldHeight: H });
@@ -52,6 +62,13 @@ export default function GarageWalls() {
         <boxGeometry args={[t, H, D - t * 2]} />
         <primitive object={rightMat} attach="material" />
       </mesh>
+
+      {/* Gable triangles — rendered with wall material so they match the walls */}
+      {gableGeo && (
+        <mesh geometry={gableGeo} castShadow receiveShadow>
+          <primitive object={gableMat} attach="material" />
+        </mesh>
+      )}
     </group>
   );
 }

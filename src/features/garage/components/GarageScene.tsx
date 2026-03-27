@@ -3,6 +3,7 @@
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Environment, ContactShadows } from '@react-three/drei';
 import { Suspense } from 'react';
+import * as THREE from 'three';
 import { useConfigStore } from '@/store/useConfigStore';
 import { useUIStore } from '@/store/useUIStore';
 import { DEFAULT_SETTINGS, type ConfiguratorSettings } from '@/config/settings';
@@ -31,17 +32,17 @@ export default function GarageScene({ settings = DEFAULT_SETTINGS }: GarageScene
   return (
     <Canvas
       shadows
-      gl={{ antialias: true }}
+      gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 0.86 }}
       camera={{ position: [dim.width * 1.5, dim.height * 2, dim.depth * 2], fov: 45, near: 0.1, far: 300 }}
       style={{ width: '100%', height: '100%', background: '#c9dff0' }}
       onClick={() => setSelectedGate(null)}
     >
       <Suspense fallback={null}>
         {/* Lighting */}
-        <ambientLight intensity={0.7} />
+        <ambientLight intensity={0.42} />
         <directionalLight
           position={[10, 20, 10]}
-          intensity={1.2}
+          intensity={0.82}
           castShadow
           shadow-mapSize={[2048, 2048]}
           shadow-camera-near={1}
@@ -53,7 +54,7 @@ export default function GarageScene({ settings = DEFAULT_SETTINGS }: GarageScene
           shadow-bias={-0.001}
           shadow-normalBias={0.05}
         />
-        <directionalLight position={[-8, 10, -8]} intensity={0.35} />
+        <directionalLight position={[-8, 10, -8]} intensity={0.22} />
 
         {/* Environment */}
         <Environment preset="city" />

@@ -17,7 +17,7 @@ export interface RoofConfig {
 }
 
 // ─── Gate ─────────────────────────────────────────────────────────────────────
-export type GateType = 'tilt' | 'double-wing';
+export type GateType = 'tilt' | 'double-wing' | 'sectional';
 export type WallSide = 'front' | 'back' | 'left' | 'right';
 export type OpenDirection = 'left' | 'right';
 

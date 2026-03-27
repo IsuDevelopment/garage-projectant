@@ -8,6 +8,8 @@ html, body {
   margin: 0;
   padding: 0;
   height: 100%;
+  width: 100%;
+  overflow-x: hidden;
   background: #0a0f18;
   color: #e2e8f0;
   font-family: system-ui, -apple-system, sans-serif;
