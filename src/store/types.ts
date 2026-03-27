@@ -42,6 +42,17 @@ export interface ConstructionConfig {
   galvanized: boolean;
 }
 
+// ─── Gutters ──────────────────────────────────────────────────────────────────
+export type GutterDrainSide = 'front' | 'back';
+export type GutterDownspout = 'both' | 'left' | 'right';
+
+export interface GutterConfig {
+  enabled: boolean;
+  color: string;               // hex — independent of global material (metal gutters)
+  drainSide: GutterDrainSide;  // which wall the trough drains toward
+  downspout: GutterDownspout;  // location of vertical pipe(s)
+}
+
 // ─── Dimensions ───────────────────────────────────────────────────────────────
 export interface GarageDimensions {
   width: number; // X axis
@@ -55,4 +66,5 @@ export interface GarageConfig {
   roof: RoofConfig;
   gates: GateConfig[];
   construction: ConstructionConfig;
+  gutters: GutterConfig;
 }

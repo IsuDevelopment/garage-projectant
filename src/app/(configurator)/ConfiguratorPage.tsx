@@ -1,12 +1,17 @@
 'use client';
 
+import { Suspense, useEffect, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { DimensionsPanel } from '@/features/dimensions/components/DimensionsPanel';
 import { RoofPanel } from '@/features/roof/components/RoofPanel';
 import { GatesPanel } from '@/features/gate/components/GatesPanel';
 import { ConstructionPanel } from '@/features/construction/components/ConstructionPanel';
+import { GutterPanel } from '@/features/gutters/components/GutterPanel';
 import { useConfigStore } from '@/store/useConfigStore';
-import { DEFAULT_SETTINGS } from '@/config/settings';
+import { useSettings } from '@/config/useSettings';
+import { SettingsProvider } from '@/config/SettingsContext';
+import type { ConfiguratorSettings } from '@/config/settings';
 
 // Canvas must be client-only — no SSR
 const GarageScene = dynamic(() => import('@/features/garage/components/GarageScene'), {
@@ -18,15 +23,80 @@ const GarageScene = dynamic(() => import('@/features/garage/components/GarageSce
   ),
 });
 
-export default function ConfiguratorPage() {
+function sanitizeConfigToSettings(settings: ConfiguratorSettings) {
+  const store = useConfigStore.getState();
+  const config = store.config;
+  const patches: (() => void)[] = [];
+
+  // Roof slope
+  if (!settings.availableRoofSlopes.includes(config.roof.slopeType)) {
+    const fallback = settings.availableRoofSlopes[0];
+    if (fallback) patches.push(() => store.setRoofSlope(fallback));
+  }
+
+  // Construction material
+  if (!settings.availableMaterials.includes(config.construction.material.type)) {
+    const fallback = settings.availableMaterials[0];
+    if (fallback) patches.push(() => store.setConstructionMaterial({ ...config.construction.material, type: fallback }));
+  }
+
+  // Profile type
+  if (!settings.availableProfiles.includes(config.construction.profileType)) {
+    const fallback = settings.availableProfiles[0];
+    if (fallback) patches.push(() => store.setProfileType(fallback));
+  }
+
+  // Roof material (if set and not available)
+  if (config.roof.material && !settings.availableMaterials.includes(config.roof.material.type)) {
+    patches.push(() => store.setRoofMaterial(null));
+  }
+
+  // Gate types
+  config.gates.forEach(gate => {
+    if (!settings.availableGateTypes.includes(gate.type)) {
+      const fallback = settings.availableGateTypes[0];
+      if (fallback) patches.push(() => store.updateGate(gate.id, { type: fallback }));
+    }
+    if (gate.material && !settings.availableMaterials.includes(gate.material.type)) {
+      patches.push(() => store.updateGate(gate.id, { material: null }));
+    }
+  });
+
+  patches.forEach(fn => fn());
+}
+
+function ConfiguratorInner() {
+  const searchParams = useSearchParams();
+  const apiKey = searchParams.get('key');
+  const settings = useSettings(apiKey);
+  const sanitized = useRef(false);
+
+  useEffect(() => {
+    if (!settings || sanitized.current) return;
+    sanitized.current = true;
+    sanitizeConfigToSettings(settings);
+  }, [settings]);
+
   const config = useConfigStore(s => s.config);
   const { width: W, height: H, depth: D } = config.dimensions;
 
+  if (!settings) {
+    return (
+      <div className="flex min-h-[100dvh] w-full items-center justify-center bg-slate-950">
+        <div className="flex flex-col items-center gap-3 text-slate-400">
+          <div className="w-8 h-8 border-2 border-slate-600 border-t-amber-400 rounded-full animate-spin" />
+          <span className="text-sm">Ładowanie konfiguracji…</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
+    <SettingsProvider settings={settings}>
     <div className="flex min-h-[100dvh] w-full flex-col bg-slate-950 font-sans lg:h-screen lg:flex-row lg:overflow-hidden">
       {/* ── 3D Viewport ───────────────────────────────────────────── */}
       <main className="order-1 relative h-[52dvh] min-h-[320px] w-full overflow-hidden lg:order-2 lg:h-full lg:flex-1">
-        <GarageScene settings={DEFAULT_SETTINGS} />
+        <GarageScene settings={settings} />
 
         {/* Camera hint overlay */}
         <div className="pointer-events-none absolute bottom-3 left-1/2 hidden -translate-x-1/2 gap-3 sm:flex lg:bottom-4 lg:gap-4">
@@ -61,6 +131,7 @@ export default function ConfiguratorPage() {
           <RoofPanel />
           <GatesPanel />
           <ConstructionPanel />
+          <GutterPanel />
         </div>
 
         {/* Footer CTA */}
@@ -78,5 +149,14 @@ export default function ConfiguratorPage() {
         </div>
       </aside>
     </div>
+    </SettingsProvider>
+  );
+}
+
+export default function ConfiguratorPage() {
+  return (
+    <Suspense>
+      <ConfiguratorInner />
+    </Suspense>
   );
 }

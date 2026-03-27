@@ -1,0 +1,169 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Auth ────────────────────────────────────────────────────────────────────
+
+enum Role {
+  SUPER_ADMIN
+  CLIENT
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  emailVerified DateTime?
+  name          String?
+  passwordHash  String?
+  role          Role      @default(CLIENT)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  client   Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  clientId String? @unique
+
+  // NextAuth required relations
+  accounts Account[]
+  sessions Session[]
+}
+
+// NextAuth tables (required by PrismaAdapter)
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ─── Client (tenant) ─────────────────────────────────────────────────────────
+
+model Client {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  apiKey    String   @unique @default(cuid())
+  isActive  Boolean  @default(true)
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user            User?
+  clientFeatures  ClientFeature[]
+  apiKeyLogs      ApiKeyLog[]
+}
+
+// ─── Features (master list) ──────────────────────────────────────────────────
+
+enum FeatureCategory {
+  MATERIAL
+  ROOF
+  GATE
+  CONSTRUCTION
+  ADVANCED
+}
+
+model Feature {
+  id          String          @id @default(cuid())
+  key         String          @unique  // e.g. "gate_sectional"
+  name        String
+  description String?
+  category    FeatureCategory
+  isDefault   Boolean         @default(false)
+  sortOrder   Int             @default(0)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  clientFeatures ClientFeature[]
+  planFeatures   PlanFeature[]
+}
+
+// ─── Client ↔ Feature junction (with pricing) ────────────────────────────────
+
+model ClientFeature {
+  id           String   @id @default(cuid())
+  clientId     String
+  featureId    String
+  enabled      Boolean  @default(false)
+  customPrice  Decimal? @db.Decimal(10, 2)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  client  Client  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  feature Feature @relation(fields: [featureId], references: [id], onDelete: Cascade)
+
+  @@unique([clientId, featureId])
+}
+
+// ─── Subscription Plans (marketing bundles) ──────────────────────────────────
+
+model SubscriptionPlan {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  basePrice   Decimal  @db.Decimal(10, 2) @default(0)
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  planFeatures PlanFeature[]
+}
+
+model PlanFeature {
+  id     String @id @default(cuid())
+  planId String
+  featureId String
+
+  plan    SubscriptionPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  feature Feature          @relation(fields: [featureId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, featureId])
+}
+
+// ─── Audit / API Key Logs ────────────────────────────────────────────────────
+
+model ApiKeyLog {
+  id        String   @id @default(cuid())
+  clientId  String
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+}

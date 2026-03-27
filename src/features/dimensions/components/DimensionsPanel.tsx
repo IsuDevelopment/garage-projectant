@@ -4,7 +4,7 @@ import { Ruler } from 'lucide-react';
 import { AccordionSection } from '@/shared/components/AccordionSection';
 import { ConfigSlider } from '@/shared/components/ConfigSlider';
 import { useConfigStore } from '@/store/useConfigStore';
-import { DEFAULT_SETTINGS } from '@/config/settings';
+import { useSettingsContext } from '@/config/SettingsContext';
 
 export function DimensionsPanel() {
   const dim      = useConfigStore(s => s.config.dimensions);
@@ -12,7 +12,7 @@ export function DimensionsPanel() {
   const setHeight = useConfigStore(s => s.setHeight);
   const setDepth  = useConfigStore(s => s.setDepth);
 
-  const { dimensions: limits } = DEFAULT_SETTINGS;
+  const { dimensions: limits } = useSettingsContext();
 
   return (
     <AccordionSection title="Wymiary" icon={<Ruler size={16} />} defaultOpen maxBodyHeight={260}>

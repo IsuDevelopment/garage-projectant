@@ -1,3 +1,131 @@
+/**
+ * Build a single BufferGeometry for all garage walls (front, back, left, right) and gables.
+ * All walls are hand-crafted quads with UV that continues seamlessly into gable fills.
+ *
+ * UV convention (must match wallQuad / wallTriangle helpers):
+ *  - front/back walls: U = 0 at X = -halfW, increases toward +X
+ *  - left/right walls: U = 0 at Z = -halfD, increases toward +Z
+ */
+export function buildWallsWithGablesGeometry(
+  dim: GarageDimensions,
+  slopeType: RoofSlopeType,
+  pitchDeg: number,
+): THREE.BufferGeometry {
+  const { width: W, height: H, depth: D } = dim;
+  const halfW = W / 2;
+  const halfD = D / 2;
+  const oh = ROOF_OVERHANG;
+
+  // Front wall (Z = +halfD) — U: left(-halfW)→0, right(+halfW)→uv(W)
+  const frontRect = quad(
+    [
+      new THREE.Vector3(-halfW, 0, halfD),
+      new THREE.Vector3( halfW, 0, halfD),
+      new THREE.Vector3( halfW, H, halfD),
+      new THREE.Vector3(-halfW, H, halfD),
+    ],
+    [uv(0), uv(0), uv(W), uv(0), uv(W), uv(H), uv(0), uv(H)],
+    new THREE.Vector3(0, 0, 1),
+  );
+
+  // Back wall (Z = -halfD) — same U convention: left(-halfW)→0, right(+halfW)→uv(W)
+  const backRect = quad(
+    [
+      new THREE.Vector3(-halfW, 0, -halfD),
+      new THREE.Vector3( halfW, 0, -halfD),
+      new THREE.Vector3( halfW, H, -halfD),
+      new THREE.Vector3(-halfW, H, -halfD),
+    ],
+    [uv(0), uv(0), uv(W), uv(0), uv(W), uv(H), uv(0), uv(H)],
+    new THREE.Vector3(0, 0, -1),
+  );
+
+  // Left wall (X = -halfW) — U: back(-halfD)→0, front(+halfD)→uv(D)
+  const leftRect = quad(
+    [
+      new THREE.Vector3(-halfW, 0, -halfD),
+      new THREE.Vector3(-halfW, 0,  halfD),
+      new THREE.Vector3(-halfW, H,  halfD),
+      new THREE.Vector3(-halfW, H, -halfD),
+    ],
+    [uv(0), uv(0), uv(D), uv(0), uv(D), uv(H), uv(0), uv(H)],
+    new THREE.Vector3(-1, 0, 0),
+  );
+
+  // Right wall (X = +halfW) — U: back(-halfD)→0, front(+halfD)→uv(D)
+  const rightRect = quad(
+    [
+      new THREE.Vector3(halfW, 0, -halfD),
+      new THREE.Vector3(halfW, 0,  halfD),
+      new THREE.Vector3(halfW, H,  halfD),
+      new THREE.Vector3(halfW, H, -halfD),
+    ],
+    [uv(0), uv(0), uv(D), uv(0), uv(D), uv(H), uv(0), uv(H)],
+    new THREE.Vector3(1, 0, 0),
+  );
+
+  // Gable fills — placed above H, UV continues from the rect tops
+  const fills: THREE.BufferGeometry[] = [];
+
+  switch (slopeType) {
+    case 'double': {
+      // Triangular gables on front (+Z) and back (-Z)
+      const ridgeH = pitchToHeight(W / 2, pitchDeg);
+      fills.push(wallTriangle([-halfW, H], [ halfW, H], [0, H + ridgeH], 'z',  halfD,  1));
+      fills.push(wallTriangle([-halfW, H], [ halfW, H], [0, H + ridgeH], 'z', -halfD, -1));
+      break;
+    }
+    case 'double-front-back': {
+      // Triangular gables on left (-X) and right (+X)
+      const ridgeH = pitchToHeight(D / 2, pitchDeg);
+      fills.push(wallTriangle([-halfD, H], [halfD, H], [0, H + ridgeH], 'x', -halfW, -1));
+      fills.push(wallTriangle([-halfD, H], [halfD, H], [0, H + ridgeH], 'x',  halfW,  1));
+      break;
+    }
+    case 'right':
+    case 'left': {
+      const roofSpan   = W + oh * 2;
+      const slopeH     = pitchToHeight(roofSpan, pitchDeg);
+      const yLowWall   = H + slopeH * oh / roofSpan;
+      const yHighWall  = H + slopeH * (W + oh) / roofSpan;
+      const yLeft  = slopeType === 'right' ? yLowWall  : yHighWall;
+      const yRight = slopeType === 'right' ? yHighWall : yLowWall;
+
+      // Trapezoid fills on front (+Z) and back (-Z)
+      fills.push(wallQuad([-halfW, H], [ halfW, H], [ halfW, yRight], [-halfW, yLeft],  'z',  halfD,  1));
+      fills.push(wallQuad([-halfW, H], [ halfW, H], [ halfW, yRight], [-halfW, yLeft],  'z', -halfD, -1));
+
+      // Rectangle fill on the high-side X-wall
+      const highX   = slopeType === 'right' ?  halfW : -halfW;
+      const highDir = slopeType === 'right' ?  1     : -1;
+      const highY   = slopeType === 'right' ? yRight : yLeft;
+      fills.push(wallQuad([-halfD, H], [halfD, H], [halfD, highY], [-halfD, highY], 'x', highX, highDir));
+      break;
+    }
+    case 'front':
+    case 'back': {
+      const roofSpan  = D + oh * 2;
+      const slopeH    = pitchToHeight(roofSpan, pitchDeg);
+      const yLowWall  = H + slopeH * oh / roofSpan;
+      const yHighWall = H + slopeH * (D + oh) / roofSpan;
+      const yFront = slopeType === 'front' ? yHighWall : yLowWall;
+      const yBack  = slopeType === 'front' ? yLowWall  : yHighWall;
+
+      // Trapezoid fills on left (-X) and right (+X)
+      fills.push(wallQuad([-halfD, H], [halfD, H], [halfD, yFront], [-halfD, yBack], 'x', -halfW, -1));
+      fills.push(wallQuad([-halfD, H], [halfD, H], [halfD, yFront], [-halfD, yBack], 'x',  halfW,  1));
+
+      // Rectangle fill on the high-side Z-wall
+      const highZ   = slopeType === 'front' ?  halfD : -halfD;
+      const highDir = slopeType === 'front' ?  1     : -1;
+      const highY   = slopeType === 'front' ? yFront : yBack;
+      fills.push(wallQuad([-halfW, H], [halfW, H], [halfW, highY], [-halfW, highY], 'z', highZ, highDir));
+      break;
+    }
+  }
+
+  return merge([frontRect, backRect, leftRect, rightRect, ...fills]);
+}
 import * as THREE from 'three';
 import { GarageDimensions, RoofSlopeType } from '@/store/types';
 

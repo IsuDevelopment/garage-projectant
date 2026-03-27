@@ -8,7 +8,8 @@ import { ConfigSlider } from '@/shared/components/ConfigSlider';
 import { MaterialPicker } from '@/features/materials/components/MaterialPicker';
 import { useConfigStore } from '@/store/useConfigStore';
 import { useUIStore } from '@/store/useUIStore';
-import { DEFAULT_SETTINGS, GATE_TYPE_LABELS } from '@/config/settings';
+import { GATE_TYPE_LABELS } from '@/config/settings';
+import { useSettingsContext } from '@/config/SettingsContext';
 import { GateConfig, GateType, OpenDirection } from '@/store/types';
 
 const GATE_TYPE_ICONS: Record<GateType, string> = {
@@ -32,9 +33,10 @@ function GateEditor({ gate }: { gate: GateConfig }) {
 
   const [open, setOpen] = useState(true);
 
-  const limits = DEFAULT_SETTINGS.gate;
+  const gs = useSettingsContext();
+  const limits = gs.gate;
 
-  const gateTypeOptions = DEFAULT_SETTINGS.availableGateTypes.map(v => ({
+  const gateTypeOptions = gs.availableGateTypes.map(v => ({
     value: v,
     label: GATE_TYPE_LABELS[v] ?? v,
     icon:  GATE_TYPE_ICONS[v],
@@ -116,7 +118,7 @@ function GateEditor({ gate }: { gate: GateConfig }) {
             label="Materiał bramy"
             value={gate.material}
             globalMaterial={globalMat}
-            availableTypes={DEFAULT_SETTINGS.availableMaterials}
+            availableTypes={gs.availableMaterials}
             onChange={m => updateGate(gate.id, { material: m })}
             allowNull
           />
@@ -145,7 +147,7 @@ export function GatesPanel() {
   const gates    = useConfigStore(s => s.config.gates);
   const addGate  = useConfigStore(s => s.addGate);
   const canAdd   = useConfigStore(s => s.canAddGate);
-  const settings = DEFAULT_SETTINGS;
+  const settings = useSettingsContext();
 
   const canAddAnother = gates.length < settings.gate.maxCount && canAdd('front', settings.gate.width.default);
 

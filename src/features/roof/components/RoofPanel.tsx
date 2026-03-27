@@ -6,7 +6,8 @@ import { RadioGroup } from '@/shared/components/RadioGroup';
 import { ConfigSlider } from '@/shared/components/ConfigSlider';
 import { MaterialPicker } from '@/features/materials/components/MaterialPicker';
 import { useConfigStore } from '@/store/useConfigStore';
-import { DEFAULT_SETTINGS, ROOF_SLOPE_LABELS } from '@/config/settings';
+import { ROOF_SLOPE_LABELS } from '@/config/settings';
+import { useSettingsContext } from '@/config/SettingsContext';
 import { RoofSlopeType } from '@/store/types';
 
 const SLOPE_ICONS: Record<RoofSlopeType, string> = {
@@ -25,10 +26,11 @@ export function RoofPanel() {
   const setRoofPitch   = useConfigStore(s => s.setRoofPitch);
   const setRoofMaterial = useConfigStore(s => s.setRoofMaterial);
 
+  const s = useSettingsContext();
   const pitchKey = roof.slopeType === 'double' || roof.slopeType === 'double-front-back' ? 'double' : 'single';
-  const roofPitch = DEFAULT_SETTINGS.roofPitch[pitchKey];
+  const roofPitch = s.roofPitch[pitchKey];
 
-  const slopeOptions = DEFAULT_SETTINGS.availableRoofSlopes.map(v => ({
+  const slopeOptions = s.availableRoofSlopes.map(v => ({
     value: v,
     label: ROOF_SLOPE_LABELS[v] ?? v,
     icon:  SLOPE_ICONS[v],
@@ -61,7 +63,7 @@ export function RoofPanel() {
         label="Materiał dachu"
         value={roof.material}
         globalMaterial={globalMat}
-        availableTypes={DEFAULT_SETTINGS.availableMaterials}
+        availableTypes={s.availableMaterials}
         onChange={setRoofMaterial}
         allowNull
       />

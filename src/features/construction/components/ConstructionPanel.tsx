@@ -5,7 +5,8 @@ import { AccordionSection } from '@/shared/components/AccordionSection';
 import { RadioGroup } from '@/shared/components/RadioGroup';
 import { MaterialPicker } from '@/features/materials/components/MaterialPicker';
 import { useConfigStore } from '@/store/useConfigStore';
-import { DEFAULT_SETTINGS, PROFILE_LABELS } from '@/config/settings';
+import { PROFILE_LABELS } from '@/config/settings';
+import { useSettingsContext } from '@/config/SettingsContext';
 import { ProfileType } from '@/store/types';
 
 export function ConstructionPanel() {
@@ -14,7 +15,8 @@ export function ConstructionPanel() {
   const setProfileType          = useConfigStore(s => s.setProfileType);
   const setGalvanized           = useConfigStore(s => s.setGalvanized);
 
-  const profileOptions = DEFAULT_SETTINGS.availableProfiles.map((v: ProfileType) => ({
+  const cs = useSettingsContext();
+  const profileOptions = cs.availableProfiles.map((v: ProfileType) => ({
     value: v,
     label: PROFILE_LABELS[v] ?? v,
   }));
@@ -24,7 +26,7 @@ export function ConstructionPanel() {
       <MaterialPicker
         label="Materiał (globalny)"
         value={construction.material}
-        availableTypes={DEFAULT_SETTINGS.availableMaterials}
+        availableTypes={cs.availableMaterials}
         onChange={m => m && setConstructionMaterial(m)}
       />
 

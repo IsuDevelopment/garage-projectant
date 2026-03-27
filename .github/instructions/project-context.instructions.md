@@ -34,6 +34,7 @@ Build and evolve a web-based 3D garage configurator where UI controls and 3D pre
 - Keep domain logic close to feature modules.
 - Shared UI primitives belong in `src/shared/components`.
 - Treat `settings.ts` as the central source for available configurator options.
+- ech feature should be responsible for its own state updates and rendering logic, but all should read from the central Zustand store for config state and ask if should have setting option in client panel
 
 ## What To Avoid
 - Adding options only in UI without updating settings/types.

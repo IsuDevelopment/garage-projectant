@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { devtools, subscribeWithSelector } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
-import { GarageConfig, GateConfig, MaterialConfig, RoofSlopeType, ProfileType, WallSide } from './types';
+import { GarageConfig, GateConfig, MaterialConfig, RoofSlopeType, ProfileType, WallSide, GutterConfig, GutterDrainSide, GutterDownspout } from './types';
 import { DEFAULT_SETTINGS } from '@/config/settings';
 
 const defaultGate: GateConfig = {
@@ -22,6 +22,13 @@ const defaultMaterial: MaterialConfig = {
   color: '#c7c7c7',
 };
 
+const defaultGutters: GutterConfig = {
+  enabled:   true,
+  color:     '#555555',
+  drainSide: 'front',
+  downspout: 'both',
+};
+
 const defaultConfig: GarageConfig = {
   dimensions: {
     width:  DEFAULT_SETTINGS.dimensions.width.default,
@@ -39,6 +46,7 @@ const defaultConfig: GarageConfig = {
     profileType: '30x40',
     galvanized: false,
   },
+  gutters: { ...defaultGutters },
 };
 
 // ─── Store interface ───────────────────────────────────────────────────────────
@@ -65,6 +73,9 @@ interface ConfigState {
   updateGate: (id: string, patch: Partial<Omit<GateConfig, 'id'>>) => void;
   removeGate: (id: string) => void;
   canAddGate: (wall: WallSide, newWidth: number, excludeId?: string) => boolean;
+
+  // Gutters
+  setGutters: (patch: Partial<GutterConfig>) => void;
 }
 
 // ─── Gate fit validation ──────────────────────────────────────────────────────
@@ -171,6 +182,9 @@ export const useConfigStore = create<ConfigState>()(
 
       canAddGate: (wall, newWidth, excludeId) =>
         gatesFitOnWall(get().config, wall, newWidth, excludeId),
+
+      setGutters: (patch) =>
+        set(s => ({ config: { ...s.config, gutters: { ...s.config.gutters, ...patch } } })),
     })),
     { name: 'GarageConfig' },
   ),
