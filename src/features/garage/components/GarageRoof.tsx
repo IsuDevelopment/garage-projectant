@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
+import * as THREE from 'three';
 import { useConfigStore } from '@/store/useConfigStore';
 import { useSpriteMaterial, effectiveMaterial } from '@/features/materials/hooks/useSpriteMaterial';
 import { buildRoofGeometry } from '../utils/geometry';
@@ -24,6 +25,7 @@ export default function GarageRoof() {
     worldWidth: 1,
     worldHeight: 1,
     tileSize: 1,
+    side: THREE.DoubleSide,
   });
 
   return (

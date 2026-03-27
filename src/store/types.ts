@@ -8,7 +8,7 @@ export interface MaterialConfig {
 }
 
 // ─── Roof ─────────────────────────────────────────────────────────────────────
-export type RoofSlopeType = 'right' | 'left' | 'back' | 'front' | 'double';
+export type RoofSlopeType = 'right' | 'left' | 'back' | 'front' | 'double' | 'double-front-back';
 
 export interface RoofConfig {
   slopeType: RoofSlopeType;

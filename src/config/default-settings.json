@@ -1,0 +1,33 @@
+{
+  "id": "default",
+  "name": "Konfigurator Garażu",
+
+  "dimensions": {
+    "width":  { "min": 3,   "max": 12,  "step": 0.1, "default": 6,   "unit": "m", "label": "Szerokość" },
+    "height": { "min": 2,   "max": 4.5, "step": 0.1, "default": 2.5, "unit": "m", "label": "Wysokość" },
+    "depth":  { "min": 3,   "max": 15,  "step": 0.1, "default": 6,   "unit": "m", "label": "Głębokość" }
+  },
+
+  "availableMaterials": ["trapez", "blachodachowka", "rabek"],
+  "availableRoofSlopes": ["right", "left", "back", "front", "double", "double-front-back"],
+  "availableGateTypes": ["tilt", "double-wing", "sectional"],
+  "availableProfiles": ["30x30", "30x40"],
+
+  "roofPitch": {
+    "single": { "mode": "range",  "min": 2, "max": 10, "default": 5,  "unit": "°", "label": "Kąt dachu" },
+    "double": { "mode": "values", "values": [10, 15, 20], "default": 15, "unit": "°", "label": "Kąt dachu" }
+  },
+
+  "gate": {
+    "width":    { "min": 1.5, "max": 4.5, "step": 0.1, "default": 2.4, "unit": "m", "label": "Szerokość bramy" },
+    "height":   { "min": 1.8, "max": 3,   "step": 0.1, "default": 2.1, "unit": "m", "label": "Wysokość bramy" },
+    "maxCount": 4
+  },
+
+  "ground": {
+    "spriteUrl": "/textures/grass.png",
+    "tileSize": 1,
+    "planeSize": 60,
+    "color": "#ffffff"
+  }
+}

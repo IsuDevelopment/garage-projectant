@@ -101,8 +101,17 @@ export const useConfigStore = create<ConfigState>()(
 
       setRoofSlope: (type) =>
         set(s => {
-          const limits = DEFAULT_SETTINGS.roofPitch[type === 'double' ? 'double' : 'single'];
-          const pitch = Math.min(Math.max(s.config.roof.pitch, limits.min), limits.max);
+          const isDoubleSlope = type === 'double' || type === 'double-front-back';
+          const limits = DEFAULT_SETTINGS.roofPitch[isDoubleSlope ? 'double' : 'single'];
+          let pitch: number;
+          if (limits.mode === 'values') {
+            // snap to nearest allowed value
+            pitch = limits.values.reduce((prev, cur) =>
+              Math.abs(cur - s.config.roof.pitch) < Math.abs(prev - s.config.roof.pitch) ? cur : prev
+            );
+          } else {
+            pitch = Math.min(Math.max(s.config.roof.pitch, limits.min), limits.max);
+          }
           return { config: { ...s.config, roof: { ...s.config.roof, slopeType: type, pitch } } };
         }),
       setRoofPitch: (deg) =>

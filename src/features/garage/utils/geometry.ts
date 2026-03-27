@@ -31,6 +31,7 @@ export function buildRoofGeometry(
 
   switch (slopeType) {
     case 'double': return buildDouble(W, H, D, pitchDeg, oh);
+    case 'double-front-back': return buildDoubleFrontBack(W, H, D, pitchDeg, oh);
     case 'right':  return buildSingle(W, H, D, pitchDeg, oh, 'right');
     case 'left':   return buildSingle(W, H, D, pitchDeg, oh, 'left');
     case 'front':  return buildSingle(W, H, D, pitchDeg, oh, 'front');
@@ -206,6 +207,45 @@ function buildDouble(W: number, H: number, D: number, pitchDeg: number, oh: numb
   return merge([leftSlope, rightSlope]);
 }
 
+function buildDoubleFrontBack(W: number, H: number, D: number, pitchDeg: number, oh: number): THREE.BufferGeometry {
+  const ridgeH   = pitchToHeight(D / 2, pitchDeg);
+  const halfW    = W / 2 + oh;
+  const halfD    = D / 2 + oh;
+  const slopeLen = Math.sqrt((D / 2 + oh) ** 2 + ridgeH ** 2);
+  const ridgeY = H + ridgeH;
+  const t = ROOF_THICKNESS;
+
+  const frontN = new THREE.Vector3(0, D / 2 + oh, ridgeH).normalize();
+  const frontOff = frontN.clone().multiplyScalar(-t);
+  const frontSlope = slab(
+    [
+      new THREE.Vector3(-halfW, H,      halfD),
+      new THREE.Vector3( halfW, H,      halfD),
+      new THREE.Vector3( halfW, ridgeY, 0),
+      new THREE.Vector3(-halfW, ridgeY, 0),
+    ],
+    [uv(0), uv(slopeLen),  uv(W + oh * 2), uv(slopeLen),  uv(W + oh * 2), uv(0),  uv(0), uv(0)],
+    frontN,
+    frontOff,
+  );
+
+  const backN = new THREE.Vector3(0, D / 2 + oh, -ridgeH).normalize();
+  const backOff = backN.clone().multiplyScalar(-t);
+  const backSlope = slab(
+    [
+      new THREE.Vector3(-halfW, ridgeY, 0),
+      new THREE.Vector3( halfW, ridgeY, 0),
+      new THREE.Vector3( halfW, H,     -halfD),
+      new THREE.Vector3(-halfW, H,     -halfD),
+    ],
+    [uv(0), uv(0),  uv(W + oh * 2), uv(0),  uv(W + oh * 2), uv(slopeLen),  uv(0), uv(slopeLen)],
+    backN,
+    backOff,
+  );
+
+  return merge([frontSlope, backSlope]);
+}
+
 
 function buildSingle(
   W: number, H: number, D: number,
@@ -301,6 +341,20 @@ export function buildGableGeometry(
         wallTriangle(
           [halfW, H], [-halfW, H], [0, H + ridgeH],
           'z', -halfD, -1,
+        ),
+      ]);
+    }
+    case 'double-front-back': {
+      // Triangular gables on left (X=-W/2) and right (X=+W/2)
+      const ridgeH = pitchToHeight(D / 2, pitchDeg);
+      return merge([
+        wallTriangle(
+          [-halfD, H], [halfD, H], [0, H + ridgeH],
+          'x', -halfW, -1,
+        ),
+        wallTriangle(
+          [halfD, H], [-halfD, H], [0, H + ridgeH],
+          'x', halfW, 1,
         ),
       ]);
     }
@@ -402,11 +456,11 @@ function wallTriangle(
     ? new THREE.Vector3(0, 0, faceDir)
     : new THREE.Vector3(faceDir, 0, 0);
 
-  // UV: map the triangle base to U axis, height to V
+  // UV: U normalized to left edge of the shape; V absolute so texture continues from the wall below.
   const baseMin = Math.min(p0[0], p1[0], p2[0]);
-  const u0 = uv(p0[0] - baseMin), tv0 = uv(p0[1] - Math.min(p0[1], p1[1], p2[1]));
-  const u1 = uv(p1[0] - baseMin), tv1 = uv(p1[1] - Math.min(p0[1], p1[1], p2[1]));
-  const u2 = uv(p2[0] - baseMin), tv2 = uv(p2[1] - Math.min(p0[1], p1[1], p2[1]));
+  const u0 = uv(p0[0] - baseMin), tv0 = uv(p0[1]);
+  const u1 = uv(p1[0] - baseMin), tv1 = uv(p1[1]);
+  const u2 = uv(p2[0] - baseMin), tv2 = uv(p2[1]);
 
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute([
@@ -448,13 +502,13 @@ function wallQuad(
 
   const pts = [p0, p1, p2, p3];
   const axisMin = Math.min(...pts.map(p => p[0]));
-  const yMin    = Math.min(...pts.map(p => p[1]));
 
+  // Use absolute Y so the texture continues seamlessly from the rectangular wall below.
   const uvCoords: [number, number, number, number, number, number, number, number] = [
-    uv(p0[0] - axisMin), uv(p0[1] - yMin),
-    uv(p1[0] - axisMin), uv(p1[1] - yMin),
-    uv(p2[0] - axisMin), uv(p2[1] - yMin),
-    uv(p3[0] - axisMin), uv(p3[1] - yMin),
+    uv(p0[0] - axisMin), uv(p0[1]),
+    uv(p1[0] - axisMin), uv(p1[1]),
+    uv(p2[0] - axisMin), uv(p2[1]),
+    uv(p3[0] - axisMin), uv(p3[1]),
   ];
 
   return quad([toV3(p0), toV3(p1), toV3(p2), toV3(p3)], uvCoords, normal);

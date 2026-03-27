@@ -10,7 +10,8 @@ import { DEFAULT_SETTINGS, ROOF_SLOPE_LABELS } from '@/config/settings';
 import { RoofSlopeType } from '@/store/types';
 
 const SLOPE_ICONS: Record<RoofSlopeType, string> = {
-  double: '🏠',
+  double: '⬍',
+  'double-front-back': '⬌',
   right:  '◪',
   left:   '◩',
   front:  '▽',
@@ -24,7 +25,7 @@ export function RoofPanel() {
   const setRoofPitch   = useConfigStore(s => s.setRoofPitch);
   const setRoofMaterial = useConfigStore(s => s.setRoofMaterial);
 
-  const pitchKey = roof.slopeType === 'double' ? 'double' : 'single';
+  const pitchKey = roof.slopeType === 'double' || roof.slopeType === 'double-front-back' ? 'double' : 'single';
   const roofPitch = DEFAULT_SETTINGS.roofPitch[pitchKey];
 
   const slopeOptions = DEFAULT_SETTINGS.availableRoofSlopes.map(v => ({
@@ -41,18 +42,19 @@ export function RoofPanel() {
           value={roof.slopeType}
           options={slopeOptions}
           onChange={setRoofSlope}
-          columns={3}
+          columns={2}
         />
       </div>
 
       <ConfigSlider
         label={roofPitch.label}
         value={roof.pitch}
-        min={roofPitch.min}
-        max={roofPitch.max}
-        step={roofPitch.step}
         unit={roofPitch.unit}
         onChange={setRoofPitch}
+        {...(roofPitch.mode === 'values'
+          ? { values: roofPitch.values }
+          : { min: roofPitch.min, max: roofPitch.max, step: 1 }
+        )}
       />
 
       <MaterialPicker

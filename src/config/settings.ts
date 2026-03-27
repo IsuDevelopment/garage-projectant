@@ -1,4 +1,5 @@
 import { MaterialType, RoofSlopeType, GateType, ProfileType } from '@/store/types';
+import defaultSettingsJson from './default-settings.json';
 
 // ─── Dimension bounds ─────────────────────────────────────────────────────────
 export interface DimensionLimits {
@@ -9,6 +10,14 @@ export interface DimensionLimits {
   unit: string;
   label: string;
 }
+
+/**
+ * Roof pitch control: either a fixed set of allowed values (stepped picker)
+ * or a continuous min/max range (integer steps only).
+ */
+export type RoofPitchLimits =
+  | { mode: 'values'; values: number[]; default: number; unit: string; label: string }
+  | { mode: 'range';  min: number; max: number; default: number; unit: string; label: string };
 
 export interface GateDimensionLimits {
   width: DimensionLimits;
@@ -33,7 +42,7 @@ export interface ConfiguratorSettings {
   availableGateTypes: GateType[];
   availableProfiles: ProfileType[];
 
-  roofPitch: Record<'single' | 'double', DimensionLimits>;
+  roofPitch: Record<'single' | 'double', RoofPitchLimits>;
 
   gate: GateDimensionLimits;
 
@@ -55,42 +64,11 @@ export interface GroundConfig {
   color: string;
 }
 
-export const DEFAULT_GROUND: GroundConfig = {
-  spriteUrl: '/textures/grass.png',
-  tileSize: 1,
-  planeSize: 60,
-  color: '#ffffff',
-};
+// ─── Default settings (sourced from JSON for future API loading) ─────────────
+export const DEFAULT_SETTINGS: ConfiguratorSettings = defaultSettingsJson as ConfiguratorSettings;
 
-// ─── Default settings ─────────────────────────────────────────────────────────
-export const DEFAULT_SETTINGS: ConfiguratorSettings = {
-  id: 'default',
-  name: 'Konfigurator Garażu',
-
-  dimensions: {
-    width:  { min: 3,   max: 12,  step: 0.1, default: 6,   unit: 'm', label: 'Szerokość' },
-    height: { min: 2,   max: 4.5, step: 0.1, default: 2.5, unit: 'm', label: 'Wysokość' },
-    depth:  { min: 3,   max: 15,  step: 0.1, default: 6,   unit: 'm', label: 'Głębokość' },
-  },
-
-  availableMaterials: ['trapez', 'blachodachowka', 'rabek'],
-  availableRoofSlopes: ['right', 'left', 'back', 'front', 'double'],
-  availableGateTypes: ['tilt', 'double-wing', 'sectional'],
-  availableProfiles: ['30x30', '30x40'],
-
-  roofPitch: {
-    single: { min: 2, max: 10, step: 1, default: 5, unit: '°', label: 'Kąt dachu' },
-    double: { min: 10, max: 20, step: 1, default: 15, unit: '°', label: 'Kąt dachu' },
-  },
-
-  gate: {
-    width:    { min: 1.5, max: 4.5, step: 0.1, default: 2.4, unit: 'm', label: 'Szerokość bramy' },
-    height:   { min: 1.8, max: 3,   step: 0.1, default: 2.1, unit: 'm', label: 'Wysokość bramy' },
-    maxCount: 4,
-  },
-
-  ground: DEFAULT_GROUND,
-};
+/** Convenience re-export for components that only need ground defaults. */
+export const DEFAULT_GROUND: GroundConfig = DEFAULT_SETTINGS.ground!;
 
 // ─── Material display info ────────────────────────────────────────────────────
 export const MATERIAL_LABELS: Record<string, string> = {
@@ -105,7 +83,8 @@ export const ROOF_SLOPE_LABELS: Record<string, string> = {
   left:   'Lewy',
   back:   'Tylni',
   front:  'Przedni',
-  double: 'Podwójny',
+  double: 'Dwuspadowy (kalenica wzdłuż)',
+  'double-front-back': 'Dwuspadowy (kalenica wszerz)',
 };
 
 // ─── Gate type display info ───────────────────────────────────────────────────

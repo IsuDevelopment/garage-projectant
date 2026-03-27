@@ -45,6 +45,7 @@ export function ConstructionPanel() {
             checked={construction.galvanized}
             onChange={e => setGalvanized(e.target.checked)}
             className="sr-only peer"
+            aria-label="Ocynkowanie"
           />
           <div className="w-10 h-6 bg-slate-700 rounded-full peer peer-checked:bg-amber-400 transition-colors" />
           <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-4" />

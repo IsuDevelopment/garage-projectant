@@ -105,6 +105,7 @@ export function MaterialPicker({
               value={effective.color}
               onChange={e => setColor(e.target.value)}
               className="opacity-0 w-full h-full cursor-pointer"
+              aria-label="Własny kolor"
             />
           </label>
         </div>
