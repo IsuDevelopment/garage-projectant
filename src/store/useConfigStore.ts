@@ -1,0 +1,152 @@
+import { create } from 'zustand';
+import { devtools, subscribeWithSelector } from 'zustand/middleware';
+import { v4 as uuidv4 } from 'uuid';
+import { GarageConfig, GateConfig, MaterialConfig, RoofSlopeType, ProfileType, WallSide } from './types';
+import { DEFAULT_SETTINGS } from '@/config/settings';
+
+// ─── Default values ────────────────────────────────────────────────────────────
+const defaultMaterial: MaterialConfig = {
+  type: 'trapez',
+  color: '#c7c7c7',
+};
+
+const defaultConfig: GarageConfig = {
+  dimensions: {
+    width:  DEFAULT_SETTINGS.dimensions.width.default,
+    height: DEFAULT_SETTINGS.dimensions.height.default,
+    depth:  DEFAULT_SETTINGS.dimensions.depth.default,
+  },
+  roof: {
+    slopeType: 'double',
+    pitch: DEFAULT_SETTINGS.roofPitch.default,
+    material: null,
+  },
+  gates: [],
+  construction: {
+    material: { ...defaultMaterial },
+    profileType: '30x40',
+    galvanized: false,
+  },
+};
+
+// ─── Store interface ───────────────────────────────────────────────────────────
+interface ConfigState {
+  config: GarageConfig;
+
+  // Dimensions
+  setWidth:  (v: number) => void;
+  setHeight: (v: number) => void;
+  setDepth:  (v: number) => void;
+
+  // Roof
+  setRoofSlope:    (type: RoofSlopeType) => void;
+  setRoofPitch:    (deg: number) => void;
+  setRoofMaterial: (m: MaterialConfig | null) => void;
+
+  // Construction
+  setConstructionMaterial: (m: MaterialConfig) => void;
+  setProfileType:          (p: ProfileType) => void;
+  setGalvanized:           (v: boolean) => void;
+
+  // Gates
+  addGate:    (wall?: WallSide) => GateConfig | null;
+  updateGate: (id: string, patch: Partial<Omit<GateConfig, 'id'>>) => void;
+  removeGate: (id: string) => void;
+  canAddGate: (wall: WallSide, newWidth: number, excludeId?: string) => boolean;
+}
+
+// ─── Gate fit validation ──────────────────────────────────────────────────────
+function wallWidth(config: GarageConfig, wall: WallSide): number {
+  return wall === 'front' || wall === 'back'
+    ? config.dimensions.width
+    : config.dimensions.depth;
+}
+
+function gatesFitOnWall(
+  config: GarageConfig,
+  wall: WallSide,
+  extraWidth: number,
+  excludeId?: string,
+): boolean {
+  const available = wallWidth(config, wall);
+  const sideMargin = 0.3; // min gap from wall edge
+  const gapBetween = 0.2; // min gap between gates
+  const existing = config.gates.filter(g => g.wall === wall && g.id !== excludeId);
+  const totalGateWidth = existing.reduce((s, g) => s + g.width, 0) + extraWidth;
+  const gaps = sideMargin * 2 + gapBetween * existing.length;
+  return totalGateWidth + gaps <= available;
+}
+
+// ─── Store ─────────────────────────────────────────────────────────────────────
+export const useConfigStore = create<ConfigState>()(
+  devtools(
+    subscribeWithSelector((set, get) => ({
+      config: defaultConfig,
+
+      setWidth:  (v) => set(s => ({ config: { ...s.config, dimensions: { ...s.config.dimensions, width:  v } } })),
+      setHeight: (v) => set(s => ({ config: { ...s.config, dimensions: { ...s.config.dimensions, height: v } } })),
+      setDepth:  (v) => set(s => ({ config: { ...s.config, dimensions: { ...s.config.dimensions, depth:  v } } })),
+
+      setRoofSlope: (type) =>
+        set(s => ({ config: { ...s.config, roof: { ...s.config.roof, slopeType: type } } })),
+      setRoofPitch: (deg) =>
+        set(s => ({ config: { ...s.config, roof: { ...s.config.roof, pitch: deg } } })),
+      setRoofMaterial: (m) =>
+        set(s => ({ config: { ...s.config, roof: { ...s.config.roof, material: m } } })),
+
+      setConstructionMaterial: (m) =>
+        set(s => ({ config: { ...s.config, construction: { ...s.config.construction, material: m } } })),
+      setProfileType: (p) =>
+        set(s => ({ config: { ...s.config, construction: { ...s.config.construction, profileType: p } } })),
+      setGalvanized: (v) =>
+        set(s => ({ config: { ...s.config, construction: { ...s.config.construction, galvanized: v } } })),
+
+      addGate: (wall = 'front') => {
+        const { config } = get();
+        const settings = DEFAULT_SETTINGS;
+        const newWidth  = settings.gate.width.default;
+        const newHeight = settings.gate.height.default;
+
+        if (config.gates.length >= settings.gate.maxCount) return null;
+        if (!gatesFitOnWall(config, wall, newWidth)) return null;
+
+        // Auto-position: place after last gate on this wall
+        const wallGates = config.gates.filter(g => g.wall === wall);
+        const taken = wallGates.reduce((s, g) => s + g.width, 0);
+        const posX  = 0.3 + taken + 0.2 * wallGates.length;
+
+        const gate: GateConfig = {
+          id: uuidv4(),
+          type: 'double-wing',
+          width: newWidth,
+          height: newHeight,
+          positionX: posX,
+          wall,
+          openDirection: 'right',
+          color: '#5a4a3a',
+          material: null,
+        };
+
+        set(s => ({ config: { ...s.config, gates: [...s.config.gates, gate] } }));
+        return gate;
+      },
+
+      updateGate: (id, patch) =>
+        set(s => ({
+          config: {
+            ...s.config,
+            gates: s.config.gates.map(g => (g.id === id ? { ...g, ...patch } : g)),
+          },
+        })),
+
+      removeGate: (id) =>
+        set(s => ({
+          config: { ...s.config, gates: s.config.gates.filter(g => g.id !== id) },
+        })),
+
+      canAddGate: (wall, newWidth, excludeId) =>
+        gatesFitOnWall(get().config, wall, newWidth, excludeId),
+    })),
+    { name: 'GarageConfig' },
+  ),
+);
