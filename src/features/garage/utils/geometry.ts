@@ -1,32 +1,23 @@
 import * as THREE from 'three';
-import { GarageDimensions } from '@/store/types';
-import { RoofSlopeType } from '@/store/types';
+import { GarageDimensions, RoofSlopeType } from '@/store/types';
 
-// ─── Roof geometry helpers ────────────────────────────────────────────────────
+export const ROOF_OVERHANG = 0.15;
+/** Tile size in world units — must match the value used in useSpriteMaterial */
+export const TILE_SIZE = 0.5;
 
-export interface RoofGeometryResult {
-  shape: THREE.Shape;
-  /** 3D positions for ExtrudeGeometry cross-section and extrude depth */
-  extrudeDepth: number;
-  /** absolute peak height above wall top */
-  peakHeight: number;
-  /** rotation to apply to the extruded mesh (on Y axis) */
-  rotation: [number, number, number];
-  /** translation to position the mesh relative to garage centre */
-  position: [number, number, number];
-}
-
-/**
- * Convert pitch in degrees to ridge height above sill for a given half-span.
- */
 export function pitchToHeight(halfSpan: number, pitchDeg: number): number {
   return halfSpan * Math.tan((pitchDeg * Math.PI) / 180);
 }
 
 /**
- * Build three.js BufferGeometry for the roof based on slope type and dimensions.
- * The garage box sits with its base at Y=0, walls up to Y=wallHeight.
- * The returned geometry is already translated/rotated relative to scene origin (garage centered at 0,0,0).
+ * Build a BufferGeometry for the roof with hand-crafted UV coordinates so that
+ * the texture tiles at exactly TILE_SIZE world-units per repeat, matching the walls.
+ *
+ * UV layout: U runs along the ridge direction (depth or width), V runs down the slope.
+ * This means prążki (stripes) are always perpendicular to the ridge — as on a real
+ * corrugated-steel roof.
+ *
+ * All positions are in world space with the garage centred at origin (Y=0 = ground).
  */
 export function buildRoofGeometry(
   dim: GarageDimensions,
@@ -34,157 +25,228 @@ export function buildRoofGeometry(
   pitchDeg: number,
 ): THREE.BufferGeometry {
   const { width: W, height: H, depth: D } = dim;
-
-  // overhang
-  const oh = 0.15;
+  const oh = ROOF_OVERHANG;
 
   switch (slopeType) {
-    case 'double':
-      return buildDoubleSlopeRoof(W, H, D, pitchDeg, oh);
-    case 'right':
-      return buildSingleSlopeRoof(W, H, D, pitchDeg, oh, 'right');
-    case 'left':
-      return buildSingleSlopeRoof(W, H, D, pitchDeg, oh, 'left');
-    case 'front':
-      return buildSingleSlopeRoof(W, H, D, pitchDeg, oh, 'front');
-    case 'back':
-      return buildSingleSlopeRoof(W, H, D, pitchDeg, oh, 'back');
-    default:
-      return buildDoubleSlopeRoof(W, H, D, pitchDeg, oh);
+    case 'double': return buildDouble(W, H, D, pitchDeg, oh);
+    case 'right':  return buildSingle(W, H, D, pitchDeg, oh, 'right');
+    case 'left':   return buildSingle(W, H, D, pitchDeg, oh, 'left');
+    case 'front':  return buildSingle(W, H, D, pitchDeg, oh, 'front');
+    case 'back':   return buildSingle(W, H, D, pitchDeg, oh, 'back');
+    default:       return buildDouble(W, H, D, pitchDeg, oh);
   }
 }
 
-// ─── Double slope (gabled) ────────────────────────────────────────────────────
-function buildDoubleSlopeRoof(W: number, H: number, D: number, pitchDeg: number, oh: number): THREE.BufferGeometry {
-  const ridgeH = pitchToHeight(W / 2, pitchDeg);
-  // Cross-section shape (looking from front, Z axis = extrude direction)
-  // Points: bottom-left, bottom-right, ridge (centre top)
-  const shape = new THREE.Shape();
-  shape.moveTo(-W / 2 - oh, H);
-  shape.lineTo(W / 2 + oh, H);
-  shape.lineTo(0, H + ridgeH);
-  shape.closePath();
+// ─── helpers ──────────────────────────────────────────────────────────────────
 
-  const geo = new THREE.ExtrudeGeometry(shape, {
-    depth: D + oh * 2,
-    bevelEnabled: false,
-  });
-  // Extrude goes +Z but we want it centred on Z
-  geo.translate(0, 0, -D / 2 - oh);
-  return geo;
-}
+/** Merge multiple BufferGeometries into one */
+function merge(geos: THREE.BufferGeometry[]): THREE.BufferGeometry {
+  const positions: number[] = [];
+  const uvs: number[]       = [];
+  const normals: number[]   = [];
+  const indices: number[]   = [];
+  let base = 0;
 
-// ─── Single slope ─────────────────────────────────────────────────────────────
-function buildSingleSlopeRoof(
-  W: number,
-  H: number,
-  D: number,
-  pitchDeg: number,
-  oh: number,
-  direction: 'right' | 'left' | 'front' | 'back',
-): THREE.BufferGeometry {
-  const isAlongWidth = direction === 'right' || direction === 'left';
-  const span = isAlongWidth ? W : D;
-  const slopeH = pitchToHeight(span, pitchDeg);
+  for (const g of geos) {
+    const pos = g.attributes.position;
+    const uv  = g.attributes.uv;
+    const nor = g.attributes.normal;
+    const idx = g.index;
 
-  // Build cross-section in XY, extrude along Z
-  const shape = new THREE.Shape();
-  const lowY  = H;
-  const highY = H + slopeH;
-  const halfSpan = span / 2 + oh;
-  const extrudeDepth = isAlongWidth ? D + oh * 2 : W + oh * 2;
-
-  if (direction === 'right') {
-    shape.moveTo(-halfSpan, lowY);
-    shape.lineTo(halfSpan, highY);
-    shape.lineTo(halfSpan, H);
-    shape.lineTo(-halfSpan, H);
-    shape.closePath();
-  } else if (direction === 'left') {
-    shape.moveTo(-halfSpan, highY);
-    shape.lineTo(halfSpan, lowY);
-    shape.lineTo(halfSpan, H);
-    shape.lineTo(-halfSpan, H);
-    shape.closePath();
-  } else {
-    // front / back — same cross-section, extruded along X
-    shape.moveTo(-halfSpan, H);
-    shape.lineTo(halfSpan, H);
-    if (direction === 'front') {
-      shape.lineTo(halfSpan, H);
-      shape.lineTo(halfSpan, highY);
-      shape.lineTo(-halfSpan, H);
-    } else {
-      shape.lineTo(-halfSpan, highY);
+    for (let i = 0; i < pos.count; i++) {
+      positions.push(pos.getX(i), pos.getY(i), pos.getZ(i));
+      uvs.push(uv.getX(i), uv.getY(i));
+      normals.push(nor.getX(i), nor.getY(i), nor.getZ(i));
     }
-    shape.closePath();
+    if (idx) {
+      for (let i = 0; i < idx.count; i++) indices.push(idx.getX(i) + base);
+    } else {
+      for (let i = 0; i < pos.count; i++) indices.push(i + base);
+    }
+    base += pos.count;
   }
 
-  const geo = new THREE.ExtrudeGeometry(shape, {
-    depth: extrudeDepth,
-    bevelEnabled: false,
-  });
-
-  if (isAlongWidth) {
-    geo.translate(0, 0, -D / 2 - oh);
-  } else {
-    // Rotate 90° around Y so it runs along depth axis
-    geo.rotateY(Math.PI / 2);
-    geo.translate(0, 0, 0);
-    // After rotation, extrude was along Z → now along X; re-centre
-    geo.translate(0, 0, 0);
-    // Manual rotation approach: rebuild for front/back using Z direction
-    // Actually rebuild properly: extrude along X
-    return buildFrontBackSlope(W, H, D, pitchDeg, oh, direction as 'front' | 'back');
-  }
-
-  return geo;
+  const out = new THREE.BufferGeometry();
+  out.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  out.setAttribute('uv',       new THREE.Float32BufferAttribute(uvs, 2));
+  out.setAttribute('normal',   new THREE.Float32BufferAttribute(normals, 3));
+  out.setIndex(indices);
+  return out;
 }
 
-function buildFrontBackSlope(
-  W: number,
-  H: number,
-  D: number,
-  pitchDeg: number,
-  oh: number,
-  direction: 'front' | 'back',
+/**
+ * Build a single quad (two triangles) with explicit UV.
+ * verts: [v0, v1, v2, v3] in CCW order for the front face.
+ * uv:    matching [u0,v0, u1,v1, u2,v2, u3,v3]
+ * normal: face normal
+ */
+function quad(
+  verts: [THREE.Vector3, THREE.Vector3, THREE.Vector3, THREE.Vector3],
+  uvCoords: [number, number, number, number, number, number, number, number],
+  normal: THREE.Vector3,
 ): THREE.BufferGeometry {
-  const slopeH = pitchToHeight(D, pitchDeg);
-  // Cross-section in ZY, extrude along X
-  const shape = new THREE.Shape();
-  const halfD = D / 2 + oh;
-  const halfW = W / 2 + oh;
+  const [v0, v1, v2, v3] = verts;
+  const [u0, t0, u1, t1, u2, t2, u3, t3] = uvCoords;
+  const nx = normal.x, ny = normal.y, nz = normal.z;
 
-  if (direction === 'back') {
-    shape.moveTo(-halfD, H);
-    shape.lineTo(halfD, H + slopeH);
-    shape.lineTo(halfD, H);
-    shape.closePath();
-  } else {
-    shape.moveTo(-halfD, H + slopeH);
-    shape.lineTo(halfD, H);
-    shape.lineTo(-halfD, H);
-    shape.closePath();
-  }
-
-  const geo = new THREE.ExtrudeGeometry(shape, {
-    depth: W + oh * 2,
-    bevelEnabled: false,
-  });
-  // Rotate so extrude axis (Z) aligns with X
-  geo.rotateY(-Math.PI / 2);
-  geo.translate(halfW - oh, 0, 0);
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute([
+    v0.x, v0.y, v0.z,
+    v1.x, v1.y, v1.z,
+    v2.x, v2.y, v2.z,
+    v3.x, v3.y, v3.z,
+  ], 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute([
+    u0, t0, u1, t1, u2, t2, u3, t3,
+  ], 2));
+  geo.setAttribute('normal', new THREE.Float32BufferAttribute([
+    nx, ny, nz, nx, ny, nz, nx, ny, nz, nx, ny, nz,
+  ], 3));
+  geo.setIndex([0, 2, 1, 0, 3, 2]);
   return geo;
 }
 
-// ─── UV helpers for sprite tiling ────────────────────────────────────────────
+// ─── UV helper ────────────────────────────────────────────────────────────────
+
+/** Convert a world distance to a UV coordinate based on TILE_SIZE */
+function uv(worldDist: number): number {
+  return worldDist / TILE_SIZE;
+}
+
+// ─── Roof types ───────────────────────────────────────────────────────────────
+
+function buildDouble(W: number, H: number, D: number, pitchDeg: number, oh: number): THREE.BufferGeometry {
+  const ridgeH   = pitchToHeight(W / 2, pitchDeg);
+  const halfW    = W / 2 + oh;
+  const halfD    = D / 2 + oh;
+  const slopeLen = Math.sqrt((W / 2 + oh) ** 2 + ridgeH ** 2); // actual surface length of each slope
+
+  // Ridge Y
+  const ridgeY = H + ridgeH;
+
+  // Left slope: ridge (X=0) → left eave (X=-halfW)
+  // U axis: along depth (Z), V axis: down the slope
+  const leftSlope = quad(
+    [
+      new THREE.Vector3( 0,      ridgeY, -halfD),
+      new THREE.Vector3( 0,      ridgeY,  halfD),
+      new THREE.Vector3(-halfW,  H,       halfD),
+      new THREE.Vector3(-halfW,  H,      -halfD),
+    ],
+    [uv(0), uv(0),  uv(D + oh*2), uv(0),  uv(D + oh*2), uv(slopeLen),  uv(0), uv(slopeLen)],
+    new THREE.Vector3(-ridgeH, W/2 + oh, 0).normalize(),
+  );
+
+  // Right slope: ridge (X=0) → right eave (X=+halfW)
+  const rightSlope = quad(
+    [
+      new THREE.Vector3(halfW,  H,      -halfD),
+      new THREE.Vector3(halfW,  H,       halfD),
+      new THREE.Vector3(0,      ridgeY,  halfD),
+      new THREE.Vector3(0,      ridgeY, -halfD),
+    ],
+    [uv(0), uv(slopeLen),  uv(D + oh*2), uv(slopeLen),  uv(D + oh*2), uv(0),  uv(0), uv(0)],
+    new THREE.Vector3(ridgeH, W/2 + oh, 0).normalize(),
+  );
+
+  // Front gable triangle (Z = +halfD)
+  const frontGeo = gableTriangle(W, H, ridgeH, oh, halfD, 1);
+  // Back gable triangle (Z = -halfD)
+  const backGeo  = gableTriangle(W, H, ridgeH, oh, -halfD, -1);
+
+  return merge([leftSlope, rightSlope, frontGeo, backGeo]);
+}
+
+function gableTriangle(W: number, H: number, ridgeH: number, oh: number, z: number, dir: number): THREE.BufferGeometry {
+  const halfW = W / 2 + oh;
+  // Three vertices: left-eave, right-eave, ridge
+  const v0 = new THREE.Vector3(-halfW, H, z);
+  const v1 = new THREE.Vector3( halfW, H, z);
+  const v2 = new THREE.Vector3(0,     H + ridgeH, z);
+  const normal = new THREE.Vector3(0, 0, dir);
+
+  const geo = new THREE.BufferGeometry();
+  const verts = dir > 0
+    ? [v0, v1, v2]
+    : [v1, v0, v2];
+
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(
+    verts.flatMap(v => [v.x, v.y, v.z]), 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute([
+    uv(0), uv(0),
+    uv(W + oh*2), uv(0),
+    uv((W + oh*2)/2), uv(ridgeH),
+  ], 2));
+  geo.setAttribute('normal', new THREE.Float32BufferAttribute(
+    [normal.x, normal.y, normal.z,  normal.x, normal.y, normal.z,  normal.x, normal.y, normal.z], 3));
+  geo.setIndex([0, 1, 2]);
+  return geo;
+}
+
+function buildSingle(
+  W: number, H: number, D: number,
+  pitchDeg: number, oh: number,
+  dir: 'right' | 'left' | 'front' | 'back',
+): THREE.BufferGeometry {
+  const isWidth = dir === 'right' || dir === 'left';
+  const span    = isWidth ? (W + oh * 2) : (D + oh * 2);
+  const ext     = isWidth ? (D + oh * 2) : (W + oh * 2);
+  const slopeH  = pitchToHeight(span, pitchDeg);
+  const slopeLen = Math.sqrt(span ** 2 + slopeH ** 2);
+
+  // low edge Y = H, high edge Y = H + slopeH
+  // U: along the ridge direction (ext), V: down the slope (slopeLen)
+  let v0: THREE.Vector3, v1: THREE.Vector3, v2: THREE.Vector3, v3: THREE.Vector3;
+  let normal: THREE.Vector3;
+
+  const hE = ext / 2;
+  const hS = span / 2;
+
+  switch (dir) {
+    case 'right': // high on right (+X), low on left (-X)
+      v0 = new THREE.Vector3(-hS, H,     -hE);
+      v1 = new THREE.Vector3( hS, H + slopeH, -hE);
+      v2 = new THREE.Vector3( hS, H + slopeH,  hE);
+      v3 = new THREE.Vector3(-hS, H,      hE);
+      normal = new THREE.Vector3(slopeH, span, 0).normalize();
+      break;
+    case 'left': // high on left (-X), low on right (+X)
+      v0 = new THREE.Vector3(-hS, H + slopeH, -hE);
+      v1 = new THREE.Vector3( hS, H,          -hE);
+      v2 = new THREE.Vector3( hS, H,           hE);
+      v3 = new THREE.Vector3(-hS, H + slopeH,  hE);
+      normal = new THREE.Vector3(-slopeH, span, 0).normalize();
+      break;
+    case 'back': // high at back (-Z), low at front (+Z)
+      v0 = new THREE.Vector3(-hE, H,          hS);
+      v1 = new THREE.Vector3( hE, H,          hS);
+      v2 = new THREE.Vector3( hE, H + slopeH, -hS);
+      v3 = new THREE.Vector3(-hE, H + slopeH, -hS);
+      normal = new THREE.Vector3(0, span, slopeH).normalize();
+      break;
+    case 'front': // high at front (+Z), low at back (-Z)
+    default:
+      v0 = new THREE.Vector3(-hE, H + slopeH,  hS);
+      v1 = new THREE.Vector3( hE, H + slopeH,  hS);
+      v2 = new THREE.Vector3( hE, H,           -hS);
+      v3 = new THREE.Vector3(-hE, H,           -hS);
+      normal = new THREE.Vector3(0, span, -slopeH).normalize();
+      break;
+  }
+
+  return quad(
+    [v0, v1, v2, v3],
+    [uv(0), uv(0),  uv(ext), uv(0),  uv(ext), uv(slopeLen),  uv(0), uv(slopeLen)],
+    normal,
+  );
+}
 
 /** Set UV repeat on a texture so it tiles at approx 1 tile per `tileSize` world units */
 export function setTextureRepeat(
   texture: THREE.Texture,
   worldW: number,
   worldH: number,
-  tileSize = 0.5,
+  tileSize = TILE_SIZE,
 ): void {
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;

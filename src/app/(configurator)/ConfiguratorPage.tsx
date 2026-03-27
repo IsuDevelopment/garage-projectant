@@ -6,6 +6,7 @@ import { RoofPanel } from '@/features/roof/components/RoofPanel';
 import { GatesPanel } from '@/features/gate/components/GatesPanel';
 import { ConstructionPanel } from '@/features/construction/components/ConstructionPanel';
 import { useConfigStore } from '@/store/useConfigStore';
+import { DEFAULT_SETTINGS } from '@/config/settings';
 
 // Canvas must be client-only — no SSR
 const GarageScene = dynamic(() => import('@/features/garage/components/GarageScene'), {
@@ -60,7 +61,7 @@ export default function ConfiguratorPage() {
 
       {/* ── 3D Viewport ───────────────────────────────────────────── */}
       <main style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-        <GarageScene />
+        <GarageScene settings={DEFAULT_SETTINGS} />
 
         {/* Camera hint overlay */}
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-4 pointer-events-none">

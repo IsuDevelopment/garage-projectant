@@ -1,13 +1,19 @@
 'use client';
 
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Environment, ContactShadows, Grid } from '@react-three/drei';
+import { OrbitControls, Environment, ContactShadows } from '@react-three/drei';
 import { Suspense } from 'react';
 import { useConfigStore } from '@/store/useConfigStore';
 import { useUIStore } from '@/store/useUIStore';
+import { DEFAULT_SETTINGS, type ConfiguratorSettings } from '@/config/settings';
 import GarageModel from './GarageModel';
+import GroundPlane from './GroundPlane';
 
-export default function GarageScene() {
+interface GarageSceneProps {
+  settings?: ConfiguratorSettings;
+}
+
+export default function GarageScene({ settings = DEFAULT_SETTINGS }: GarageSceneProps) {
   const dim = useConfigStore(s => s.config.dimensions);
   const setSelectedGate = useUIStore(s => s.setSelectedGate);
 
@@ -27,7 +33,7 @@ export default function GarageScene() {
       shadows
       gl={{ antialias: true }}
       camera={{ position: [dim.width * 1.5, dim.height * 2, dim.depth * 2], fov: 45, near: 0.1, far: 300 }}
-      style={{ width: '100%', height: '100%', background: '#d8dde4' }}
+      style={{ width: '100%', height: '100%', background: '#c9dff0' }}
       onClick={() => setSelectedGate(null)}
     >
       <Suspense fallback={null}>
@@ -53,18 +59,7 @@ export default function GarageScene() {
         <Environment preset="city" />
 
         {/* Ground */}
-        <Grid
-          position={[0, -0.01, 0]}
-          args={[50, 50]}
-          cellSize={1}
-          cellThickness={0.5}
-          cellColor="#94a3b8"
-          sectionSize={5}
-          sectionThickness={1}
-          sectionColor="#64748b"
-          fadeDistance={40}
-          infiniteGrid
-        />
+        <GroundPlane config={settings.ground} />
         <ContactShadows position={[0, 0.01, 0]} opacity={0.35} scale={24} blur={3.5} far={8} resolution={512} />
 
         {/* Garage */}

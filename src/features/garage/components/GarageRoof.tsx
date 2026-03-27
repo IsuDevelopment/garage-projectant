@@ -6,9 +6,9 @@ import { useSpriteMaterial, effectiveMaterial } from '@/features/materials/hooks
 import { buildRoofGeometry } from '../utils/geometry';
 
 export default function GarageRoof() {
-  const dim         = useConfigStore(s => s.config.dimensions);
-  const roof        = useConfigStore(s => s.config.roof);
-  const globalMat   = useConfigStore(s => s.config.construction.material);
+  const dim       = useConfigStore(s => s.config.dimensions);
+  const roof      = useConfigStore(s => s.config.roof);
+  const globalMat = useConfigStore(s => s.config.construction.material);
 
   const roofMat = effectiveMaterial(roof.material, globalMat);
 
@@ -17,39 +17,13 @@ export default function GarageRoof() {
     [dim, roof.slopeType, roof.pitch],
   );
 
-  // Compute actual roof slope surface dimensions so texture tiles at the same
-  // density as the walls (tileSize=0.5 → 2 tiles/m in both directions).
-  // ExtrudeGeometry UV-u runs along the shape perimeter, so we must pass the
-  // real slope length rather than the plan-view width.
-  const pitchRad = (roof.pitch * Math.PI) / 180;
-  const oh = 0.15; // overhang — must match geometry.ts
-  const { width: W, depth: D } = dim;
-
-  const slopeWorldWidth = useMemo(() => {
-    switch (roof.slopeType) {
-      case 'double':
-        // two slopes, each of half-span / cos(pitch)
-        return ((W / 2 + oh) / Math.cos(pitchRad)) * 2;
-      case 'right':
-      case 'left':
-        return (W + oh * 2) / Math.cos(pitchRad);
-      case 'front':
-      case 'back':
-        return (D + oh * 2) / Math.cos(pitchRad);
-      default:
-        return W;
-    }
-  }, [W, D, oh, pitchRad, roof.slopeType]);
-
-  const slopeWorldHeight = (roof.slopeType === 'front' || roof.slopeType === 'back')
-    ? W + oh * 2
-    : D + oh * 2;
-
+  // UV coordinates in geometry.ts are already expressed in world-units / TILE_SIZE,
+  // so texture.repeat must stay at 1×1 (no extra scaling here).
   const material = useSpriteMaterial({
     config: roofMat,
-    worldWidth: slopeWorldWidth,
-    worldHeight: slopeWorldHeight,
-    tileSize: 0.5,
+    worldWidth: 1,
+    worldHeight: 1,
+    tileSize: 1,
   });
 
   return (
@@ -58,3 +32,4 @@ export default function GarageRoof() {
     </mesh>
   );
 }
+

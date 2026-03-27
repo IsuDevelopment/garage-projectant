@@ -38,7 +38,29 @@ export interface ConfiguratorSettings {
   gate: GateDimensionLimits;
 
   customSprites?: Record<string, { name: string; url: string }>;
+
+  /** Ground plane appearance — swap per instance (grass, asphalt, concrete, …) */
+  ground?: GroundConfig;
 }
+
+// ─── Ground config ────────────────────────────────────────────────────────────
+export interface GroundConfig {
+  /** Path to the sprite texture (from /public/) */
+  spriteUrl: string;
+  /** Size of one texture tile in world-space metres */
+  tileSize: number;
+  /** Total side length of the ground plane in metres */
+  planeSize: number;
+  /** Hex tint applied on top of the texture (e.g. '#ffffff' = no tint) */
+  color: string;
+}
+
+export const DEFAULT_GROUND: GroundConfig = {
+  spriteUrl: '/textures/grass.png',
+  tileSize: 1,
+  planeSize: 60,
+  color: '#ffffff',
+};
 
 // ─── Default settings ─────────────────────────────────────────────────────────
 export const DEFAULT_SETTINGS: ConfiguratorSettings = {
@@ -63,6 +85,8 @@ export const DEFAULT_SETTINGS: ConfiguratorSettings = {
     height:   { min: 1.8, max: 3,   step: 0.1, default: 2.1, unit: 'm', label: 'Wysokość bramy' },
     maxCount: 4,
   },
+
+  ground: DEFAULT_GROUND,
 };
 
 // ─── Material display info ────────────────────────────────────────────────────
