@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { devtools, subscribeWithSelector } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
-import { GarageConfig, GateConfig, MaterialConfig, RoofSlopeType, ProfileType, WallSide, GutterConfig, GutterDrainSide, GutterDownspout } from './types';
+import { GarageConfig, GateConfig, MaterialConfig, RoofSlopeType, ProfileType, WallSide, GutterConfig, GutterDrainSide, GutterDownspout, RoofFeltConfig } from './types';
 import { DEFAULT_SETTINGS } from '@/config/settings';
 
 const defaultGate: GateConfig = {
@@ -29,6 +29,10 @@ const defaultGutters: GutterConfig = {
   downspout: 'both',
 };
 
+const defaultFeltRoof: RoofFeltConfig = {
+  enabled: false,
+};
+
 const defaultConfig: GarageConfig = {
   dimensions: {
     width:  DEFAULT_SETTINGS.dimensions.width.default,
@@ -46,7 +50,8 @@ const defaultConfig: GarageConfig = {
     profileType: '30x40',
     galvanized: false,
   },
-  gutters: { ...defaultGutters },
+  gutters:  { ...defaultGutters },
+  feltRoof: { ...defaultFeltRoof },
 };
 
 // ─── Store interface ───────────────────────────────────────────────────────────
@@ -76,6 +81,9 @@ interface ConfigState {
 
   // Gutters
   setGutters: (patch: Partial<GutterConfig>) => void;
+
+  // Roof felt
+  setFeltRoof: (patch: Partial<RoofFeltConfig>) => void;
 }
 
 // ─── Gate fit validation ──────────────────────────────────────────────────────
@@ -185,6 +193,9 @@ export const useConfigStore = create<ConfigState>()(
 
       setGutters: (patch) =>
         set(s => ({ config: { ...s.config, gutters: { ...s.config.gutters, ...patch } } })),
+
+      setFeltRoof: (patch) =>
+        set(s => ({ config: { ...s.config, feltRoof: { ...s.config.feltRoof, ...patch } } })),
     })),
     { name: 'GarageConfig' },
   ),

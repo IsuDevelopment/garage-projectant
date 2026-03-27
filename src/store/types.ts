@@ -53,6 +53,11 @@ export interface GutterConfig {
   downspout: GutterDownspout;  // location of vertical pipe(s)
 }
 
+// ─── Roof Felt ───────────────────────────────────────────────────────────────
+export interface RoofFeltConfig {
+  enabled: boolean; // whether felt underlay is selected by user
+}
+
 // ─── Dimensions ───────────────────────────────────────────────────────────────
 export interface GarageDimensions {
   width: number; // X axis
@@ -67,4 +72,5 @@ export interface GarageConfig {
   gates: GateConfig[];
   construction: ConstructionConfig;
   gutters: GutterConfig;
+  feltRoof: RoofFeltConfig;
 }

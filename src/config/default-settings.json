@@ -45,5 +45,11 @@
     "tileSize": 1,
     "planeSize": 60,
     "color": "#ffffff"
+  },
+
+  "roofFelt": {
+    "enabled": true,
+    "description": "Stosuje się w garażach, aby zapobiegać skraplaniu się wilgoci na wewnętrznej stronie blachy, co chroni przed korozją i tworzeniem się pleśni.",
+    "previewImage": "/textures/felt-preview.jpg"
   }
 }

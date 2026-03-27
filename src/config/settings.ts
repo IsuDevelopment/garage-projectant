@@ -71,6 +71,19 @@ export interface ConfiguratorSettings {
 
   /** Ground plane appearance — swap per instance (grass, asphalt, concrete, …) */
   ground?: GroundConfig;
+
+  /** Roof felt underlay feature — optional; absent = feature hidden */
+  roofFelt?: RoofFeltSettings;
+}
+
+// ─── Roof Felt feature settings ─────────────────────────────────────────────
+export interface RoofFeltSettings {
+  /** Whether this feature is available for this client instance */
+  enabled: boolean;
+  /** Explanatory text shown in the configurator UI */
+  description: string;
+  /** Optional preview image path (from /public/), displayed next to the toggle */
+  previewImage?: string;
 }
 
 // ─── Ground config ────────────────────────────────────────────────────────────
