@@ -33,7 +33,7 @@ export interface ConfiguratorSettings {
   availableGateTypes: GateType[];
   availableProfiles: ProfileType[];
 
-  roofPitch: DimensionLimits;
+  roofPitch: Record<'single' | 'double', DimensionLimits>;
 
   gate: GateDimensionLimits;
 
@@ -78,7 +78,10 @@ export const DEFAULT_SETTINGS: ConfiguratorSettings = {
   availableGateTypes: ['tilt', 'double-wing', 'sectional'],
   availableProfiles: ['30x30', '30x40'],
 
-  roofPitch: { min: 5, max: 40, step: 1, default: 20, unit: '°', label: 'Kąt dachu' },
+  roofPitch: {
+    single: { min: 2, max: 10, step: 1, default: 5, unit: '°', label: 'Kąt dachu' },
+    double: { min: 10, max: 20, step: 1, default: 15, unit: '°', label: 'Kąt dachu' },
+  },
 
   gate: {
     width:    { min: 1.5, max: 4.5, step: 0.1, default: 2.4, unit: 'm', label: 'Szerokość bramy' },

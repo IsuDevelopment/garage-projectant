@@ -30,7 +30,7 @@ const defaultConfig: GarageConfig = {
   },
   roof: {
     slopeType: 'double',
-    pitch: DEFAULT_SETTINGS.roofPitch.default,
+    pitch: DEFAULT_SETTINGS.roofPitch.double.default,
     material: null,
   },
   gates: [defaultGate],
@@ -100,7 +100,11 @@ export const useConfigStore = create<ConfigState>()(
       setDepth:  (v) => set(s => ({ config: { ...s.config, dimensions: { ...s.config.dimensions, depth:  v } } })),
 
       setRoofSlope: (type) =>
-        set(s => ({ config: { ...s.config, roof: { ...s.config.roof, slopeType: type } } })),
+        set(s => {
+          const limits = DEFAULT_SETTINGS.roofPitch[type === 'double' ? 'double' : 'single'];
+          const pitch = Math.min(Math.max(s.config.roof.pitch, limits.min), limits.max);
+          return { config: { ...s.config, roof: { ...s.config.roof, slopeType: type, pitch } } };
+        }),
       setRoofPitch: (deg) =>
         set(s => ({ config: { ...s.config, roof: { ...s.config.roof, pitch: deg } } })),
       setRoofMaterial: (m) =>

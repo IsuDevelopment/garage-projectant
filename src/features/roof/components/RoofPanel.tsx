@@ -24,7 +24,8 @@ export function RoofPanel() {
   const setRoofPitch   = useConfigStore(s => s.setRoofPitch);
   const setRoofMaterial = useConfigStore(s => s.setRoofMaterial);
 
-  const { roofPitch } = DEFAULT_SETTINGS;
+  const pitchKey = roof.slopeType === 'double' ? 'double' : 'single';
+  const roofPitch = DEFAULT_SETTINGS.roofPitch[pitchKey];
 
   const slopeOptions = DEFAULT_SETTINGS.availableRoofSlopes.map(v => ({
     value: v,

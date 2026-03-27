@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
+import * as THREE from 'three';
 import { useConfigStore } from '@/store/useConfigStore';
 import { effectiveMaterial } from '@/features/materials/hooks/useSpriteMaterial';
 import { useSpriteMaterial } from '@/features/materials/hooks/useSpriteMaterial';
@@ -23,7 +24,7 @@ export default function GarageWalls() {
     () => buildGableGeometry(dim, roof.slopeType, roof.pitch),
     [dim, roof.slopeType, roof.pitch],
   );
-  const gableMat = useSpriteMaterial({ config: wallMat, worldWidth: 1, worldHeight: 1, tileSize: 1 });
+  const gableMat = useSpriteMaterial({ config: wallMat, worldWidth: 1, worldHeight: 1, tileSize: 1, side: THREE.DoubleSide });
 
   const frontMat = useSpriteMaterial({ config: wallMat, worldWidth: W, worldHeight: H });
   const backMat  = useSpriteMaterial({ config: wallMat, worldWidth: W, worldHeight: H });
