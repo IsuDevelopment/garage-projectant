@@ -6,6 +6,7 @@ import { AccordionSection } from '@/shared/components/AccordionSection';
 import { RadioGroup } from '@/shared/components/RadioGroup';
 import { ConfigSlider } from '@/shared/components/ConfigSlider';
 import { MaterialPicker } from '@/features/materials/components/MaterialPicker';
+import { ColorPicker } from '@/shared/components/ColorPicker';
 import { useConfigStore } from '@/store/useConfigStore';
 import { useUIStore } from '@/store/useUIStore';
 import { GATE_TYPE_LABELS } from '@/config/settings';
@@ -124,19 +125,13 @@ function GateEditor({ gate }: { gate: GateConfig }) {
           />
 
           {/* Color per gate */}
-          <div className="flex flex-col gap-1.5">
-            <span className="text-xs text-slate-400">Kolor bramy</span>
-            <div className="flex items-center gap-2">
-              <input
-                type="color"
-                value={gate.color}
-                aria-label="Wybierz kolor bramy"
-                onChange={e => updateGate(gate.id, { color: e.target.value })}
-                className="w-8 h-8 rounded cursor-pointer border border-slate-600 bg-transparent"
-              />
-              <span className="text-xs text-slate-500 font-mono">{gate.color.toUpperCase()}</span>
-            </div>
-          </div>
+          <ColorPicker
+            value={gate.color}
+            onChange={c => updateGate(gate.id, { color: c })}
+            presets={gs.colors.set}
+            allowCustomColor={gs.colors.allowCustomColor}
+            activeMaterial={(gate.material ?? globalMat).type}
+          />
         </div>
       )}
     </div>

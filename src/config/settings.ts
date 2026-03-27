@@ -25,6 +25,24 @@ export interface GateDimensionLimits {
   maxCount: number;
 }
 
+// ─── Color system ─────────────────────────────────────────────────────────────
+
+/**
+ * A named color preset.
+ * `textures` — when set, this color only appears when the active material type matches.
+ * Omit or leave empty to show for all materials.
+ */
+export interface ColorPreset {
+  name: string;
+  color: string;             // hex e.g. "#c0c8d0"
+  textures?: MaterialType[]; // restrict to specific material types
+}
+
+export interface ColorConfig {
+  set: ColorPreset[];
+  allowCustomColor: boolean;
+}
+
 // ─── Configurator settings (static Phase 1, from API Phase 2) ─────────────────
 export interface ConfiguratorSettings {
   id: string;
@@ -47,6 +65,9 @@ export interface ConfiguratorSettings {
   gate: GateDimensionLimits;
 
   customSprites?: Record<string, { name: string; url: string }>;
+
+  /** Global color palette and custom-color policy for this instance */
+  colors: ColorConfig;
 
   /** Ground plane appearance — swap per instance (grass, asphalt, concrete, …) */
   ground?: GroundConfig;

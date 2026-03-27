@@ -3,7 +3,9 @@
 import { Droplets } from 'lucide-react';
 import { AccordionSection } from '@/shared/components/AccordionSection';
 import { RadioGroup } from '@/shared/components/RadioGroup';
+import { ColorPicker } from '@/shared/components/ColorPicker';
 import { useConfigStore } from '@/store/useConfigStore';
+import { useSettingsContext } from '@/config/SettingsContext';
 import type { GutterDrainSide, GutterDownspout } from '@/store/types';
 
 const DRAIN_SIDE_OPTIONS: { value: GutterDrainSide; label: string; icon: string }[] = [
@@ -21,6 +23,7 @@ export function GutterPanel() {
   const gutters    = useConfigStore(s => s.config.gutters);
   const setGutters = useConfigStore(s => s.setGutters);
   const slopeType  = useConfigStore(s => s.config.roof.slopeType);
+  const { colors } = useSettingsContext();
 
   // Double-pitched roofs have two independent eaves — downspout is always "both"
   const isDouble = slopeType === 'double' || slopeType === 'double-front-back';
@@ -49,19 +52,12 @@ export function GutterPanel() {
       {gutters.enabled && (
         <>
           {/* Color */}
-          <div className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-slate-400 uppercase tracking-wide">Kolor rynien</span>
-            <div className="flex items-center gap-2">
-              <input
-                type="color"
-                value={gutters.color}
-                aria-label="Kolor rynien"
-                onChange={e => setGutters({ color: e.target.value })}
-                className="w-8 h-8 rounded cursor-pointer border border-slate-600 bg-transparent"
-              />
-              <span className="text-xs text-slate-500 font-mono">{gutters.color.toUpperCase()}</span>
-            </div>
-          </div>
+          <ColorPicker
+            value={gutters.color}
+            onChange={c => setGutters({ color: c })}
+            presets={colors.set}
+            allowCustomColor={colors.allowCustomColor}
+          />
 
           {/* Drain side — only for double-pitch roofs (front/back drain end) */}
           {isDouble && (

@@ -2,35 +2,76 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run dev      # dev server → http://localhost:3000
+npm run build    # production build
+npm run start    # serve production build
+
+npm run db:push   # sync schema to DB
+npm run db:seed   # seed admin user + master features
+npm run db:studio # Prisma Studio GUI → http://localhost:5555
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## System kolorów
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Kolory w konfiguratorze pochodzą z globalnej palety definiowanej w `src/config/default-settings.json` (lub przez API dla klientów). Każdy element (ściany, dach, brama, rynny) czyta tę samą paletę z `SettingsContext`.
+
+### Struktura konfiguracji
+
+```json
+"colors": {
+  "allowCustomColor": true,
+  "set": [
+    {
+      "name": "Galwanizowana",
+      "color": "#c0c8d0"
+    },
+    {
+      "name": "Tylko dla trapezu",
+      "color": "#8b7355",
+      "textures": ["trapez"]
+    }
+  ]
+}
+```
+
+### Pola
+
+| Pole | Typ | Opis |
+|---|---|---|
+| `colors.set` | `ColorPreset[]` | Lista presetów kolorów dostępnych w konfiguratorze |
+| `colors.set[].name` | `string` | Wyświetlana nazwa (tooltip) |
+| `colors.set[].color` | `string` | Kolor w formacie hex |
+| `colors.set[].textures` | `MaterialType[]` | Opcjonalna lista materiałów — kolor pojawia się tylko gdy aktywny materiał pasuje. Pominięcie lub `[]` = widoczny dla wszystkich |
+| `colors.allowCustomColor` | `boolean` | Czy użytkownik może wybrać dowolny kolor poza paletą (kółko z kreskowaną obwódką) |
+
+### Przepływ danych
+
+```
+default-settings.json (lub GET /api/settings?apiKey=xxx)
+  └─ SettingsContext (React context)
+       └─ ColorPicker (src/shared/components/ColorPicker.tsx)
+            ├─ MaterialPicker (ściany, dach)
+            ├─ GatesPanel (kolor per brama)
+            └─ GutterPanel (kolor rynien)
+```
+
+### Filtrowanie po materiale
+
+Preset z `"textures": ["trapez", "blachodachowka"]` pojawi się w pickerze tylko wtedy gdy aktywny typ materiału to `trapez` lub `blachodachowka`. Pozwala to na konfigurację palet per linia produktowa — np. inne kolory dla blachodachówki dachowej niż dla rąbka.
+
+### Konfiguracja per klient (super admin)
+
+W przyszłości paleta będzie edytowalna przez super admina w panelu `/admin/clients/[id]` jako feature `colors_custom_palette`. Na razie wszyscy klienci dziedziczą `default-settings.json` lub paletę przypisaną przez API.
+
+---
 
 ## Learn More
 
-To learn more about Next.js, take a look at the following resources:
+- [Next.js Documentation](https://nextjs.org/docs)
+- [React Three Fiber](https://docs.pmnd.rs/react-three-fiber)
+- [Zustand](https://docs.pmnd.rs/zustand)
+- [Prisma](https://www.prisma.io/docs)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.

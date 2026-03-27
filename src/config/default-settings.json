@@ -24,6 +24,22 @@
     "maxCount": 4
   },
 
+  "customSprites": {},
+
+  "colors": {
+    "allowCustomColor": true,
+    "set": [
+      { "name": "Galwanizowana", "color": "#c0c8d0" },
+      { "name": "Brązowa",       "color": "#8b7355" },
+      { "name": "Ciemnozielona", "color": "#2d4a2d" },
+      { "name": "Ceglasta",      "color": "#b22222" },
+      { "name": "Granatowa",     "color": "#1a1a2e" },
+      { "name": "Antracyt",      "color": "#4a4a4a" },
+      { "name": "Kremowa",       "color": "#f5f0e8" },
+      { "name": "Biała",         "color": "#ffffff" }
+    ]
+  },
+
   "ground": {
     "spriteUrl": "/textures/grass.png",
     "tileSize": 1,
