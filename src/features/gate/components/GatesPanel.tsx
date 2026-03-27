@@ -119,7 +119,7 @@ function GateEditor({ gate }: { gate: GateConfig }) {
             label="Materiał bramy"
             value={gate.material}
             globalMaterial={globalMat}
-            availableTypes={gs.availableMaterials}
+            element="gates"
             onChange={m => updateGate(gate.id, { material: m })}
             allowNull
           />

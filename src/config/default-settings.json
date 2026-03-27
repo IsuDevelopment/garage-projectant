@@ -8,7 +8,61 @@
     "depth":  { "min": 3,   "max": 15,  "step": 0.1, "default": 6,   "unit": "m", "label": "Głębokość" }
   },
 
-  "availableMaterials": ["trapez", "blachodachowka", "rabek"],
+  "materials": [
+    {
+      "slug": "trapez",
+      "name": "Blacha trapezowa",
+      "description": "Uniwersalna blacha trapezowa do ścian, dachu i bram.",
+      "texture": "/textures/trapez.png",
+      "defaultColor": "#c0c8d0",
+      "appliesTo": ["walls", "roof", "gates"],
+      "isPremium": false,
+      "allowColors": true,
+      "subFeatures": [
+        {
+          "slug": "orientation",
+          "name": "Kierunek przetłoczeń",
+          "type": "select",
+          "options": [
+            { "value": "vertical", "label": "Pion" },
+            { "value": "horizontal", "label": "Poziom" }
+          ],
+          "default": "vertical"
+        }
+      ],
+      "price": 0
+    },
+    {
+      "slug": "blachodachowka",
+      "name": "Blachodachówka",
+      "description": "Poszycie dachowe premium, dostępne wyłącznie dla dachu.",
+      "texture": "/textures/blachodachowka.png",
+      "defaultColor": "#4a4a4a",
+      "appliesTo": ["roof"],
+      "allowedSlopes": ["right", "left", "back", "front", "double", "double-front-back"],
+      "previewImage": "/textures/blachodachowka.png",
+      "isPremium": true,
+      "allowColors": true,
+      "colorSet": [
+        { "name": "Antracyt", "color": "#4a4a4a" },
+        { "name": "Ceglasta", "color": "#b22222" },
+        { "name": "Brązowa", "color": "#8b7355" },
+        { "name": "Ciemnozielona", "color": "#2d4a2d" }
+      ],
+      "price": 0
+    },
+    {
+      "slug": "rabek",
+      "name": "Rąbek",
+      "description": "Nowoczesny rąbek stojący do ścian, dachu i bram.",
+      "texture": "/textures/rabek.png",
+      "defaultColor": "#c0c8d0",
+      "appliesTo": ["walls", "roof", "gates"],
+      "isPremium": false,
+      "allowColors": true,
+      "price": 0
+    }
+  ],
   "availableRoofSlopes": ["right", "left", "back", "front", "double", "double-front-back"],
   "availableGateTypes": ["tilt", "double-wing", "sectional"],
   "availableProfiles": ["30x30", "30x40"],
@@ -29,14 +83,14 @@
   "colors": {
     "allowCustomColor": true,
     "set": [
-      { "name": "Galwanizowana", "color": "#c0c8d0" },
-      { "name": "Brązowa",       "color": "#8b7355" },
-      { "name": "Ciemnozielona", "color": "#2d4a2d" },
-      { "name": "Ceglasta",      "color": "#b22222" },
-      { "name": "Granatowa",     "color": "#1a1a2e" },
-      { "name": "Antracyt",      "color": "#4a4a4a" },
-      { "name": "Kremowa",       "color": "#f5f0e8" },
-      { "name": "Biała",         "color": "#ffffff" }
+      { "slug": "galvanized",   "name": "Galwanizowana", "color": "#c0c8d0" },
+      { "slug": "brown",        "name": "Brązowa",       "color": "#8b7355" },
+      { "slug": "dark-green",   "name": "Ciemnozielona", "color": "#2d4a2d" },
+      { "slug": "brick-red",    "name": "Ceglasta",      "color": "#b22222" },
+      { "slug": "navy",         "name": "Granatowa",     "color": "#1a1a2e" },
+      { "slug": "anthracite",   "name": "Antracyt",      "color": "#4a4a4a" },
+      { "slug": "cream",        "name": "Kremowa",       "color": "#f5f0e8" },
+      { "slug": "white",        "name": "Biała",         "color": "#ffffff" }
     ]
   },
 
@@ -44,7 +98,7 @@
     "spriteUrl": "/textures/grass.png",
     "tileSize": 1,
     "planeSize": 60,
-    "color": "#ffffff"
+    "color": "#7ec850"
   },
 
   "roofFelt": {

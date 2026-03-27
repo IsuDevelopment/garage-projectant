@@ -68,6 +68,56 @@ W przyszłości paleta będzie edytowalna przez super admina w panelu `/admin/cl
 
 ---
 
+## System materiałów (feature-based)
+
+Materiały są pełnymi feature'ami konfiguracyjnymi i są definiowane w `src/config/default-settings.json` pod kluczem `materials`.
+
+### Struktura materiału
+
+```json
+{
+  "slug": "trapez",
+  "name": "Blacha trapezowa",
+  "texture": "/textures/trapez.png",
+  "defaultColor": "#c0c8d0",
+  "appliesTo": ["walls", "roof", "gates"],
+  "allowedSlopes": ["double", "right"],
+  "isPremium": false,
+  "allowColors": true,
+  "colorSet": [{ "name": "Antracyt", "color": "#4a4a4a" }],
+  "subFeatures": [
+    {
+      "slug": "orientation",
+      "name": "Kierunek przetłoczeń",
+      "type": "select",
+      "options": [
+        { "value": "vertical", "label": "Pion" },
+        { "value": "horizontal", "label": "Poziom" }
+      ],
+      "default": "vertical"
+    }
+  ],
+  "price": 0
+}
+```
+
+### Zasady
+
+| Pole | Opis |
+|---|---|
+| `appliesTo` | Określa, dla jakiego elementu materiał jest dostępny (`walls`, `roof`, `gates`) |
+| `allowedSlopes` | Ogranicza materiał dachowy do konkretnych typów spadku |
+| `colorSet` | Nadpisuje globalną paletę kolorów dla danego materiału |
+| `allowColors` | `false` wymusza `defaultColor` |
+| `isPremium` | UI pokazuje badge Premium |
+| `subFeatures` | Rozszerzalne sub-opcje materiału (select/slider) |
+
+### Filtrowanie per klient
+
+W `buildClientSettings` lista `materials` jest filtrowana na podstawie feature key `material_{slug}` (np. `material_trapez`).
+
+---
+
 ## Learn More
 
 - [Next.js Documentation](https://nextjs.org/docs)

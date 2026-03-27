@@ -14,10 +14,7 @@ export function buildClientSettings(
 ): ConfiguratorSettings {
   const keys = new Set(enabledFeatures.map(f => f.key));
 
-  const availableMaterials: ConfiguratorSettings['availableMaterials'] = [];
-  if (keys.has('material_trapez'))         availableMaterials.push('trapez');
-  if (keys.has('material_blachodachowka')) availableMaterials.push('blachodachowka');
-  if (keys.has('material_rabek'))          availableMaterials.push('rabek');
+  const materials = DEFAULT_SETTINGS.materials.filter(m => keys.has(`material_${m.slug}`));
 
   const availableRoofSlopes: ConfiguratorSettings['availableRoofSlopes'] = [];
   if (keys.has('roof_single')) availableRoofSlopes.push('right', 'left', 'front', 'back');
@@ -48,7 +45,7 @@ export function buildClientSettings(
     name:                clientName,
     companyId:           clientId,
     dimensions,
-    availableMaterials:  availableMaterials.length  ? availableMaterials  : DEFAULT_SETTINGS.availableMaterials,
+    materials:           materials.length           ? materials           : DEFAULT_SETTINGS.materials,
     availableRoofSlopes: availableRoofSlopes.length ? availableRoofSlopes : DEFAULT_SETTINGS.availableRoofSlopes,
     availableGateTypes:  availableGateTypes.length  ? availableGateTypes  : DEFAULT_SETTINGS.availableGateTypes,
     availableProfiles:   availableProfiles.length   ? availableProfiles   : DEFAULT_SETTINGS.availableProfiles,

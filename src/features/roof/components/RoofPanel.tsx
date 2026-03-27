@@ -66,7 +66,8 @@ export function RoofPanel() {
         label="Materiał dachu"
         value={roof.material}
         globalMaterial={globalMat}
-        availableTypes={s.availableMaterials}
+        element="roof"
+        roofSlopeType={roof.slopeType}
         onChange={setRoofMaterial}
         allowNull
       />

@@ -1,4 +1,4 @@
-import { MaterialType, RoofSlopeType, GateType, ProfileType } from '@/store/types';
+import { MaterialType, MaterialDefinition, RoofSlopeType, GateType, ProfileType } from '@/store/types';
 import defaultSettingsJson from './default-settings.json';
 
 // ─── Dimension bounds ─────────────────────────────────────────────────────────
@@ -33,9 +33,11 @@ export interface GateDimensionLimits {
  * Omit or leave empty to show for all materials.
  */
 export interface ColorPreset {
+  slug: string;              // stable identifier, language-independent (e.g. "galvanized")
   name: string;
   color: string;             // hex e.g. "#c0c8d0"
   textures?: MaterialType[]; // restrict to specific material types
+  price?: number;            // [future] optional surcharge for this colour
 }
 
 export interface ColorConfig {
@@ -55,7 +57,7 @@ export interface ConfiguratorSettings {
     depth: DimensionLimits;
   };
 
-  availableMaterials: MaterialType[];
+  materials: MaterialDefinition[];
   availableRoofSlopes: RoofSlopeType[];
   availableGateTypes: GateType[];
   availableProfiles: ProfileType[];
@@ -105,11 +107,20 @@ export const DEFAULT_SETTINGS: ConfiguratorSettings = defaultSettingsJson as Con
 export const DEFAULT_GROUND: GroundConfig = DEFAULT_SETTINGS.ground!;
 
 // ─── Material display info ────────────────────────────────────────────────────
-export const MATERIAL_LABELS: Record<string, string> = {
-  trapez:          'Trapez',
-  blachodachowka:  'Blachodachówka',
-  rabek:           'Rąbek',
-};
+export const MATERIAL_LABELS: Record<string, string> = DEFAULT_SETTINGS.materials.reduce(
+  (acc, mat) => {
+    acc[mat.slug] = mat.name;
+    return acc;
+  },
+  {} as Record<string, string>,
+);
+
+export function getMaterialDefinition(
+  settings: ConfiguratorSettings,
+  slug: MaterialType,
+): MaterialDefinition | undefined {
+  return settings.materials.find(m => m.slug === slug);
+}
 
 // ─── Roof slope display info ──────────────────────────────────────────────────
 export const ROOF_SLOPE_LABELS: Record<string, string> = {

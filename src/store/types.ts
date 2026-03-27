@@ -1,10 +1,49 @@
 // ─── Material Types ────────────────────────────────────────────────────────────
 export type MaterialType = 'trapez' | 'blachodachowka' | 'rabek';
 
+export type MaterialElement = 'walls' | 'roof' | 'gates';
+
 export interface MaterialConfig {
   type: MaterialType;
   color: string; // hex — tinted onto the sprite texture
-  customSpriteUrl?: string; // [Phase 2] per-company custom sprite
+  customSpriteUrl?: string; // per-company custom sprite
+  /** Selected values for material-specific sub-features */
+  subOptions?: Record<string, string | number>;
+}
+
+export interface MaterialColorPreset {
+  name: string;
+  color: string;
+}
+
+export interface MaterialSubFeature {
+  slug: string;
+  name: string;
+  type: 'select' | 'slider';
+  options?: { value: string; label: string }[];
+  min?: number;
+  max?: number;
+  step?: number;
+  unit?: string;
+  default: string | number;
+}
+
+export interface MaterialDefinition {
+  /** Material feature slug; also used as texture/material key */
+  slug: MaterialType;
+  name: string;
+  description?: string;
+  texture: string;
+  previewImage?: string;
+  defaultColor: string;
+  appliesTo: MaterialElement[];
+  /** Restriction used when material is applied to roof */
+  allowedSlopes?: RoofSlopeType[];
+  isPremium?: boolean;
+  allowColors: boolean;
+  colorSet?: MaterialColorPreset[];
+  subFeatures?: MaterialSubFeature[];
+  price?: number;
 }
 
 // ─── Roof ─────────────────────────────────────────────────────────────────────

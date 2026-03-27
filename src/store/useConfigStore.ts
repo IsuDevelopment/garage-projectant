@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { devtools, subscribeWithSelector } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
-import { GarageConfig, GateConfig, MaterialConfig, RoofSlopeType, ProfileType, WallSide, GutterConfig, GutterDrainSide, GutterDownspout, RoofFeltConfig } from './types';
+import { GarageConfig, GateConfig, MaterialConfig, RoofSlopeType, ProfileType, WallSide, GutterConfig, RoofFeltConfig } from './types';
 import { DEFAULT_SETTINGS } from '@/config/settings';
 
 const defaultGate: GateConfig = {
@@ -17,9 +17,16 @@ const defaultGate: GateConfig = {
 };
 
 // ─── Default values ────────────────────────────────────────────────────────────
+const defaultMaterialDef = DEFAULT_SETTINGS.materials[0];
+
 const defaultMaterial: MaterialConfig = {
-  type: 'trapez',
-  color: '#c7c7c7',
+  type: defaultMaterialDef?.slug ?? 'trapez',
+  color: defaultMaterialDef?.defaultColor ?? '#c7c7c7',
+  customSpriteUrl: defaultMaterialDef?.texture,
+  subOptions: defaultMaterialDef?.subFeatures?.reduce((acc, sf) => {
+    acc[sf.slug] = sf.default;
+    return acc;
+  }, {} as Record<string, string | number>),
 };
 
 const defaultGutters: GutterConfig = {

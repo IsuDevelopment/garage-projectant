@@ -3,10 +3,12 @@
 import type { ColorPreset } from '@/config/settings';
 import type { MaterialType } from '@/store/types';
 
+type ColorOption = Pick<ColorPreset, 'name' | 'color'> & Partial<Pick<ColorPreset, 'textures'>>;
+
 interface ColorPickerProps {
   value: string;
   onChange: (hex: string) => void;
-  presets: ColorPreset[];
+  presets: ColorOption[];
   allowCustomColor: boolean;
   /** When set, only presets compatible with this material type are shown */
   activeMaterial?: MaterialType;

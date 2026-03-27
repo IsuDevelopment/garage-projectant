@@ -7,9 +7,19 @@ def make_png(w, h, pattern):
             bright = 40 if s < 2 else (-20 if s > 6 else 0)
             return (min(255, max(0, 190 + bright)), min(255, max(0, 195 + bright)), min(255, max(0, 200 + bright)))
         elif pattern == 'blachodachowka':
-            tx, ty = x % 16, y % 12
-            edge = int(tx < 1 or ty < 1 or tx > 14 or ty > 10)
-            return (max(0, 170 - 30 * edge), max(0, 140 - 30 * edge), max(0, 120 - 30 * edge))
+            # Tile grid – each tile is 32×26 px; bell-curve highlight + 2 px seam shadow
+            tw, th = 32, 26
+            tx, ty = x % tw, y % th
+            # Quadratic bell: 0 at edges → 1 at centre
+            cx = 4.0 * tx * (tw - 1 - tx) / float((tw - 1) ** 2)
+            cy = 4.0 * ty * (th - 1 - ty) / float((th - 1) ** 2)
+            seam = tx < 2 or ty < 2
+            base = 207
+            highlight = int(28 * cx + 18 * cy)
+            shadow = 62 if seam else 0
+            v = max(0, min(255, base + highlight - shadow))
+            # Cool steel-blue tint
+            return (max(0, v - 7), max(0, v - 4), v)
         elif pattern == 'rabek':
             s = x % 12
             seam = int(s < 2)
@@ -45,8 +55,10 @@ def make_png(w, h, pattern):
 base = os.path.join(os.path.dirname(__file__), '..', 'public', 'textures')
 os.makedirs(base, exist_ok=True)
 
+sizes = {'trapez': (64, 64), 'blachodachowka': (128, 128), 'rabek': (64, 64), 'grass': (64, 64)}
 for name, pat in [('trapez', 'trapez'), ('blachodachowka', 'blachodachowka'), ('rabek', 'rabek'), ('grass', 'grass')]:
-    data = make_png(64, 64, pat)
+    w, h = sizes[name]
+    data = make_png(w, h, pat)
     path = os.path.join(base, name + '.png')
     with open(path, 'wb') as f:
         f.write(data)

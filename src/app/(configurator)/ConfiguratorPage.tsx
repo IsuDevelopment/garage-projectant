@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useRef } from 'react';
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { DimensionsPanel } from '@/features/dimensions/components/DimensionsPanel';
@@ -12,6 +12,7 @@ import { useConfigStore } from '@/store/useConfigStore';
 import { useSettings } from '@/config/useSettings';
 import { SettingsProvider } from '@/config/SettingsContext';
 import type { ConfiguratorSettings } from '@/config/settings';
+import type { MaterialType } from '@/store/types';
 
 // Canvas must be client-only — no SSR
 const GarageScene = dynamic(() => import('@/features/garage/components/GarageScene'), {
@@ -27,6 +28,36 @@ function sanitizeConfigToSettings(settings: ConfiguratorSettings) {
   const store = useConfigStore.getState();
   const config = store.config;
   const patches: (() => void)[] = [];
+  const materialMap = new Map(settings.materials.map(m => [m.slug, m]));
+
+  const firstFor = (element: 'walls' | 'roof' | 'gates') =>
+    settings.materials.find(m => m.appliesTo.includes(element));
+
+  const firstRoofForSlope = () =>
+    settings.materials.find(m =>
+      m.appliesTo.includes('roof') && (!m.allowedSlopes || m.allowedSlopes.includes(config.roof.slopeType)),
+    );
+
+  const materialFromDef = (def: ConfiguratorSettings['materials'][number]) => ({
+    type: def.slug,
+    color: def.defaultColor,
+    customSpriteUrl: def.texture,
+    subOptions: def.subFeatures?.reduce((acc, sf) => {
+      acc[sf.slug] = sf.default;
+      return acc;
+    }, {} as Record<string, string | number>),
+  });
+
+  const normalizeColor = (type: MaterialType, color: string) => {
+    const def = materialMap.get(type);
+    if (!def) return color;
+    if (!def.allowColors) return def.defaultColor;
+    if (def.colorSet?.length) {
+      const allowed = def.colorSet.map(c => c.color.toLowerCase());
+      if (!allowed.includes(color.toLowerCase())) return def.defaultColor;
+    }
+    return color;
+  };
 
   // Roof slope
   if (!settings.availableRoofSlopes.includes(config.roof.slopeType)) {
@@ -34,10 +65,25 @@ function sanitizeConfigToSettings(settings: ConfiguratorSettings) {
     if (fallback) patches.push(() => store.setRoofSlope(fallback));
   }
 
-  // Construction material
-  if (!settings.availableMaterials.includes(config.construction.material.type)) {
-    const fallback = settings.availableMaterials[0];
-    if (fallback) patches.push(() => store.setConstructionMaterial({ ...config.construction.material, type: fallback }));
+  // Construction material (walls)
+  const constructionDef = materialMap.get(config.construction.material.type);
+  if (!constructionDef || !constructionDef.appliesTo.includes('walls')) {
+    const fallback = firstFor('walls');
+    if (fallback) {
+      patches.push(() => store.setConstructionMaterial({
+        type: fallback.slug,
+        color: fallback.defaultColor,
+        customSpriteUrl: fallback.texture,
+      }));
+    }
+  } else {
+    const normalizedColor = normalizeColor(config.construction.material.type, config.construction.material.color);
+    if (normalizedColor !== config.construction.material.color) {
+      patches.push(() => store.setConstructionMaterial({
+        ...config.construction.material,
+        color: normalizedColor,
+      }));
+    }
   }
 
   // Profile type
@@ -46,9 +92,31 @@ function sanitizeConfigToSettings(settings: ConfiguratorSettings) {
     if (fallback) patches.push(() => store.setProfileType(fallback));
   }
 
-  // Roof material (if set and not available)
-  if (config.roof.material && !settings.availableMaterials.includes(config.roof.material.type)) {
-    patches.push(() => store.setRoofMaterial(null));
+  // Roof material (if set and disallowed)
+  if (config.roof.material) {
+    const roofMaterial = config.roof.material;
+    const roofDef = materialMap.get(roofMaterial.type);
+    const roofAllowed = roofDef
+      && roofDef.appliesTo.includes('roof')
+      && (!roofDef.allowedSlopes || roofDef.allowedSlopes.includes(config.roof.slopeType));
+
+    if (!roofAllowed) {
+      patches.push(() => store.setRoofMaterial(null));
+    } else {
+      const normalizedColor = normalizeColor(roofMaterial.type, roofMaterial.color);
+      if (normalizedColor !== roofMaterial.color) {
+        patches.push(() => store.setRoofMaterial({ ...roofMaterial, color: normalizedColor }));
+      }
+    }
+  } else {
+    const inheritedDef = materialMap.get(config.construction.material.type);
+    const inheritedAllowed = inheritedDef
+      && inheritedDef.appliesTo.includes('roof')
+      && (!inheritedDef.allowedSlopes || inheritedDef.allowedSlopes.includes(config.roof.slopeType));
+    if (!inheritedAllowed) {
+      const fallback = firstRoofForSlope();
+      if (fallback) patches.push(() => store.setRoofMaterial(materialFromDef(fallback)));
+    }
   }
 
   // Gate types
@@ -57,8 +125,26 @@ function sanitizeConfigToSettings(settings: ConfiguratorSettings) {
       const fallback = settings.availableGateTypes[0];
       if (fallback) patches.push(() => store.updateGate(gate.id, { type: fallback }));
     }
-    if (gate.material && !settings.availableMaterials.includes(gate.material.type)) {
-      patches.push(() => store.updateGate(gate.id, { material: null }));
+    if (gate.material) {
+      const gateMaterial = gate.material;
+      const gateDef = materialMap.get(gateMaterial.type);
+      if (!gateDef || !gateDef.appliesTo.includes('gates')) {
+        patches.push(() => store.updateGate(gate.id, { material: null }));
+      } else {
+        const normalizedColor = normalizeColor(gateMaterial.type, gateMaterial.color);
+        if (normalizedColor !== gateMaterial.color) {
+          patches.push(() => store.updateGate(gate.id, { material: { ...gateMaterial, color: normalizedColor } }));
+        }
+      }
+    } else {
+      const inheritedDef = materialMap.get(config.construction.material.type);
+      const inheritedAllowed = inheritedDef && inheritedDef.appliesTo.includes('gates');
+      if (!inheritedAllowed) {
+        const fallback = firstFor('gates');
+        if (fallback) {
+          patches.push(() => store.updateGate(gate.id, { material: materialFromDef(fallback) }));
+        }
+      }
     }
   });
 
@@ -70,6 +156,32 @@ function ConfiguratorInner() {
   const apiKey = searchParams.get('key');
   const settings = useSettings(apiKey);
   const sanitized = useRef(false);
+
+  // ── Resizable sidebar (desktop only) ────────────────────────────────────
+  const [sidebarWidth, setSidebarWidth] = useState(340);
+  const resizing = useRef(false);
+
+  const startResize = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    resizing.current = true;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    const onMove = (ev: MouseEvent) => {
+      if (!resizing.current) return;
+      const maxW = window.innerWidth * 0.4;
+      setSidebarWidth(Math.min(Math.max(ev.clientX, 340), maxW));
+    };
+    const onUp = () => {
+      resizing.current = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }, []);
 
   useEffect(() => {
     if (!settings || sanitized.current) return;
@@ -114,7 +226,15 @@ function ConfiguratorInner() {
       </main>
 
       {/* ── Left panel ────────────────────────────────────────────── */}
-      <aside className="order-2 w-full border-t border-slate-800 bg-slate-950 lg:order-1 lg:h-full lg:min-w-[288px] lg:w-[320px] lg:flex-shrink-0 lg:border-r lg:border-t-0 lg:grid lg:grid-rows-[auto_1fr_auto] lg:overflow-hidden">
+      <aside
+        className="configurator-sidebar order-2 relative border-t border-slate-800 bg-slate-950 lg:order-1 lg:h-full lg:border-r lg:border-t-0 lg:grid lg:grid-rows-[auto_1fr_auto] lg:overflow-hidden"
+        style={{ '--sidebar-w': `${sidebarWidth}px` } as React.CSSProperties}
+      >
+        {/* Drag handle — desktop only */}
+        <div
+          className="sidebar-resize-handle hidden lg:block"
+          onMouseDown={startResize}
+        />
         {/* Header */}
         <div className="px-5 py-4 border-b border-slate-800">
           <h1 className="text-base font-bold text-white tracking-tight">

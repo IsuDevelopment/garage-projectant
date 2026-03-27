@@ -26,7 +26,7 @@ export function ConstructionPanel() {
       <MaterialPicker
         label="Materiał (globalny)"
         value={construction.material}
-        availableTypes={cs.availableMaterials}
+        element="walls"
         onChange={m => m && setConstructionMaterial(m)}
       />
 

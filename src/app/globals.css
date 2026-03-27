@@ -25,6 +25,30 @@ html, body {
 .sidebar-scroll::-webkit-scrollbar-track   { background: #0f172a; }
 .sidebar-scroll::-webkit-scrollbar-thumb   { background: #334155; border-radius: 3px; }
 
+/* Resizable sidebar — width driven by --sidebar-w CSS variable (desktop only) */
+@media (min-width: 1024px) {
+  .configurator-sidebar {
+    width: var(--sidebar-w, 340px);
+    min-width: 340px;
+    max-width: 40dvw;
+    flex-shrink: 0;
+  }
+  .sidebar-resize-handle {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 5px;
+    cursor: col-resize;
+    z-index: 20;
+    transition: background 0.15s;
+  }
+  .sidebar-resize-handle:hover,
+  .sidebar-resize-handle--active {
+    background: #f59e0b80;
+  }
+}
+
 /* Range input track styling */
 input[type='range']::-webkit-slider-runnable-track {
   height: 6px;
