@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import { ThreeEvent } from '@react-three/fiber';
 import { useSpriteMaterial, effectiveMaterial } from '@/features/materials/hooks/useSpriteMaterial';
-import { DoorConfig } from '@/store/types';
+import { DoorConfig, OpenDirection } from '@/store/types';
 import { useUIStore } from '@/store/useUIStore';
 import { useConfigStore } from '@/store/useConfigStore';
 
@@ -70,8 +70,9 @@ function DoorHinge({ x, y, z = 0.02 }: { x: number; y: number; z?: number }) {
   );
 }
 
-function DoorHandle({ x, y }: { x: number; y: number }) {
+function DoorHandle({ x, y, direction }: { x: number; y: number; direction: OpenDirection }) {
   const z = 0.024;
+  const leverX = direction === 'left' ? 0.038 : -0.038;
   return (
     <group position={[x, y, z]}>
       {/* Vertical grip */}
@@ -80,7 +81,7 @@ function DoorHandle({ x, y }: { x: number; y: number }) {
         <meshStandardMaterial color="#818181" roughness={0.4} metalness={0.5} />
       </mesh>
       {/* Horizontal lever */}
-      <mesh position={[0.038, -0.055, 0]} castShadow>
+      <mesh position={[leverX, -0.055, 0]} castShadow>
         <boxGeometry args={[0.06, 0.02, 0.025]} />
         <meshStandardMaterial color="#818181" roughness={0.4} metalness={0.5} />
       </mesh>
@@ -94,6 +95,7 @@ export default function DoorModel({ door, garageWidth: W, garageDepth: D }: Door
 
   const isSelected  = selectedDoorId === door.id;
   const isDouble    = door.typeSlug === 'double';
+  const openDir: OpenDirection = door.openDirection ?? 'left';
   const panelW      = isDouble ? door.width / 2 : door.width;
   const matConfig   = effectiveMaterial(door.material, { ...globalMat, color: door.color });
 
@@ -137,8 +139,8 @@ export default function DoorModel({ door, garageWidth: W, garageDepth: D }: Door
         <DoorHinge x={door.width / 2 - 0.025} y={hingeTopY} />
         <DoorHinge x={door.width / 2 - 0.025} y={hingeBotY} />
         {/* Handles near center */}
-        <DoorHandle x={-0.07} y={0} />
-        <DoorHandle x={0.07}  y={0} />
+        <DoorHandle x={-0.07} y={0} direction="left" />
+        <DoorHandle x={0.07}  y={0} direction="right" />
         {isSelected && (
           <lineSegments>
             <edgesGeometry args={[new THREE.BoxGeometry(door.width + 0.06, door.height + 0.06, 0.02)]} />
@@ -149,7 +151,11 @@ export default function DoorModel({ door, garageWidth: W, garageDepth: D }: Door
     );
   }
 
-  // Single door — hinges on left, handle on right side
+  // Single door — hinge side/handle side depend on open direction
+  const isLeftOpen = openDir === 'left';
+  const hingeX = isLeftOpen ? -door.width / 2 + 0.025 : door.width / 2 - 0.025;
+  const handleX = isLeftOpen ? door.width * 0.35 : -door.width * 0.35;
+
   return (
     <group position={position} rotation={[0, rotationY, 0]} onClick={handleClick}>
       <DoorFrame width={door.width} height={door.height} />
@@ -157,9 +163,9 @@ export default function DoorModel({ door, garageWidth: W, garageDepth: D }: Door
         <planeGeometry args={[door.width, door.height]} />
         <primitive object={leftMat} attach="material" />
       </mesh>
-      <DoorHinge x={-door.width / 2 + 0.025} y={hingeTopY} />
-      <DoorHinge x={-door.width / 2 + 0.025} y={hingeBotY} />
-      <DoorHandle x={door.width * 0.35} y={0} />
+      <DoorHinge x={hingeX} y={hingeTopY} />
+      <DoorHinge x={hingeX} y={hingeBotY} />
+      <DoorHandle x={handleX} y={0} direction={openDir} />
       {isSelected && (
         <lineSegments>
           <edgesGeometry args={[new THREE.BoxGeometry(door.width + 0.06, door.height + 0.06, 0.02)]} />

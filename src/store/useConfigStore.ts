@@ -315,6 +315,7 @@ export const useConfigStore = create<ConfigState>()(
           typeSlug: firstType.slug,
           width: newWidth,
           height: newHeight,
+          openDirection: 'left',
           positionX: posX,
           wall,
           color: '#c0c8d0',

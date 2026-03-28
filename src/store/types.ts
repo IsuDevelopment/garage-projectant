@@ -125,6 +125,7 @@ export interface DoorConfig {
   positionX: number;      // offset from left edge of the wall (metres)
   width: number;          // metres
   height: number;         // metres
+  openDirection?: OpenDirection;
   color: string;          // hex
   material: MaterialConfig | null; // null = inherit from construction.material
 }

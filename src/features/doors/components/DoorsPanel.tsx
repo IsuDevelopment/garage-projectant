@@ -10,7 +10,7 @@ import { useConfigStore } from '@/store/useConfigStore';
 import { useUIStore } from '@/store/useUIStore';
 import { cmToMeters, getDoorMaxCount, getDoorTypeDefinition, getDoorTypes } from '@/config/settings';
 import { useSettingsContext } from '@/config/SettingsContext';
-import { DoorConfig, WallSide } from '@/store/types';
+import { DoorConfig, OpenDirection, WallSide } from '@/store/types';
 import {
   SIDE_MARGIN,
   WALL_LABELS,
@@ -28,6 +28,11 @@ const WALL_OPTIONS: { value: WallSide; label: string }[] = [
   { value: 'right', label: 'Prawo' },
 ];
 
+const OPEN_DIR_OPTIONS: { value: OpenDirection; label: string; icon: string }[] = [
+  { value: 'left', label: 'Lewo', icon: '←' },
+  { value: 'right', label: 'Prawo', icon: '→' },
+];
+
 function DoorEditor({ door }: { door: DoorConfig }) {
   const updateDoor = useConfigStore(s => s.updateDoor);
   const removeDoor = useConfigStore(s => s.removeDoor);
@@ -42,6 +47,7 @@ function DoorEditor({ door }: { door: DoorConfig }) {
 
   const doorTypes = getDoorTypes(gs);
   const typeDef   = getDoorTypeDefinition(gs, door.typeSlug);
+  const isSingleDoor = door.typeSlug === 'single';
 
   const typeOptions = doorTypes.map(t => ({ value: t.slug, label: t.name }));
 
@@ -69,6 +75,9 @@ function DoorEditor({ door }: { door: DoorConfig }) {
       typeSlug: nextTypeSlug,
       width:    cmToMeters(firstSize.width),
       height:   cmToMeters(firstSize.height),
+      ...(nextTypeSlug === 'single'
+        ? { openDirection: door.openDirection ?? 'left' }
+        : {}),
     });
   }
 
@@ -175,6 +184,18 @@ function DoorEditor({ door }: { door: DoorConfig }) {
               unit="m"
               onChange={tryUpdatePosition}
             />
+          )}
+
+          {isSingleDoor && (
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs text-slate-400">Kierunek otwierania</span>
+              <RadioGroup
+                value={door.openDirection ?? 'left'}
+                options={OPEN_DIR_OPTIONS}
+                onChange={(v) => updateDoor(door.id, { openDirection: v })}
+                columns={2}
+              />
+            </div>
           )}
 
           <MaterialPicker
