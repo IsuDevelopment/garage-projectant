@@ -11,7 +11,9 @@ import { GutterPanel } from '@/features/gutters/components/GutterPanel';
 import { AdditionalServicesPanel } from '@/features/additional-services/components/AdditionalServicesPanel';
 import { useConfigStore } from '@/store/useConfigStore';
 import { useSettings } from '@/config/useSettings';
+import { useUIStore } from '@/store/useUIStore';
 import { SettingsProvider } from '@/config/SettingsContext';
+import { CollisionDialog } from '@/shared/components/CollisionDialog';
 import type { ConfiguratorSettings } from '@/config/settings';
 import type { MaterialType } from '@/store/types';
 
@@ -231,8 +233,19 @@ function ConfiguratorInner() {
   }, [settings]);
 
   const config = useConfigStore(s => s.config);
+  const applyPendingDimensions = useConfigStore(s => s.applyPendingDimensions);
+  const removeGate = useConfigStore(s => s.removeGate);
+  const collisionDialog = useUIStore(s => s.collisionDialog);
+  const closeCollisionDialog = useUIStore(s => s.closeCollisionDialog);
   const hasAdditionalServices = ((settings?.additionalFeatures ?? []).filter(feature => feature.enabled !== false).length ?? 0) > 0;
   const { width: W, height: H, depth: D } = config.dimensions;
+
+  function handleCollisionConfirm() {
+    if (!collisionDialog.pendingDimensions) return;
+    collisionDialog.conflicts.forEach(c => removeGate(c.id));
+    applyPendingDimensions(collisionDialog.pendingDimensions);
+    closeCollisionDialog();
+  }
 
   if (!settings) {
     return (
@@ -248,6 +261,12 @@ function ConfiguratorInner() {
   return (
     <SettingsProvider settings={settings}>
     <div className="flex min-h-[100dvh] w-full flex-col bg-slate-950 font-sans lg:h-screen lg:flex-row lg:overflow-hidden">
+      <CollisionDialog
+        open={collisionDialog.open}
+        conflicts={collisionDialog.conflicts}
+        onConfirm={handleCollisionConfirm}
+        onCancel={closeCollisionDialog}
+      />
       {/* ── 3D Viewport ───────────────────────────────────────────── */}
       <main className="order-1 relative h-[52dvh] min-h-[320px] w-full overflow-hidden lg:order-2 lg:h-full lg:flex-1">
         <GarageScene settings={settings} />

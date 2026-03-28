@@ -10,7 +10,16 @@ import { useConfigStore } from '@/store/useConfigStore';
 import { useUIStore } from '@/store/useUIStore';
 import { GATE_TYPE_LABELS } from '@/config/settings';
 import { useSettingsContext } from '@/config/SettingsContext';
-import { GateConfig, GateType, OpenDirection } from '@/store/types';
+import { GateConfig, GateType, OpenDirection, WallSide } from '@/store/types';
+import {
+  SIDE_MARGIN,
+  WALL_LABELS,
+  WallObjectBounds,
+  wallWidthForSide,
+  computePositionBounds,
+  snapToNearestValid,
+  gatesFitOnWall,
+} from '@/store/wallCollision';
 
 const GATE_TYPE_ICONS: Record<GateType, string> = {
   tilt:          '⬆',
@@ -24,16 +33,24 @@ const GATE_TYPE_SHORT_LABELS: Record<GateType, string> = {
   sectional: 'Segment.',
 };
 
+const WALL_OPTIONS: { value: WallSide; label: string }[] = [
+  { value: 'front', label: 'Przód' },
+  { value: 'back',  label: 'Tył' },
+  { value: 'left',  label: 'Lewo' },
+  { value: 'right', label: 'Prawo' },
+];
+
 function GateEditor({ gate }: { gate: GateConfig }) {
-  const updateGate  = useConfigStore(s => s.updateGate);
-  const removeGate  = useConfigStore(s => s.removeGate);
-  const globalMat   = useConfigStore(s => s.config.construction.material);
-  const canAddGate  = useConfigStore(s => s.canAddGate);
+  const updateGate   = useConfigStore(s => s.updateGate);
+  const removeGate   = useConfigStore(s => s.removeGate);
+  const globalMat    = useConfigStore(s => s.config.construction.material);
+  const dimensions   = useConfigStore(s => s.config.dimensions);
+  const gates        = useConfigStore(s => s.config.gates);
   const { setSelectedGate } = useUIStore();
 
   const [open, setOpen] = useState(true);
 
-  const gs = useSettingsContext();
+  const gs     = useSettingsContext();
   const limits = gs.gate;
 
   const gateTypeOptions = gs.availableGateTypes.map(v => ({
@@ -47,9 +64,47 @@ function GateEditor({ gate }: { gate: GateConfig }) {
     { value: 'right', label: 'Prawo', icon: '→' },
   ];
 
+  // ── Position bounds for the gate on its current wall ──────────────────
+  const wallW = wallWidthForSide(dimensions, gate.wall);
+  const wallObjs: WallObjectBounds[] = gates
+    .filter(g => g.wall === gate.wall)
+    .map(g => ({ id: g.id, positionX: g.positionX, width: g.width, height: g.height, wall: g.wall }));
+  const { min: posMin, max: posMax, blockedRanges } =
+    computePositionBounds(wallW, gate.width, wallObjs, gate.id);
+
+  // ── Max slider bounds ──────────────────────────────────────────────────
+  const maxWidth  = Math.min(limits.width.max,  wallW - 0.6);
+  const maxHeight = Math.min(limits.height.max, dimensions.height - 0.2);
+
   function tryUpdateWidth(w: number) {
-    const fits = canAddGate(gate.wall, w, gate.id);
-    if (fits) updateGate(gate.id, { width: w });
+    const { min, max, blockedRanges: br } =
+      computePositionBounds(wallW, w, wallObjs, gate.id);
+    if (max < min) return;
+    const newPosX = snapToNearestValid(gate.positionX, br, min, max);
+    updateGate(gate.id, { width: w, positionX: newPosX });
+  }
+
+  function tryUpdatePosition(rawX: number) {
+    const snapped = snapToNearestValid(rawX, blockedRanges, posMin, posMax);
+    updateGate(gate.id, { positionX: snapped });
+  }
+
+  function tryUpdateWall(newWall: WallSide) {
+    if (newWall === gate.wall) return;
+    const newWallW = wallWidthForSide(dimensions, newWall);
+    const existingWidths = gates
+      .filter(g => g.wall === newWall)
+      .map(g => g.width);
+    if (!gatesFitOnWall(dimensions, newWall, existingWidths, gate.width)) return;
+
+    const newWallObjs: WallObjectBounds[] = gates
+      .filter(g => g.wall === newWall)
+      .map(g => ({ id: g.id, positionX: g.positionX, width: g.width, height: g.height, wall: g.wall }));
+    const { min, max, blockedRanges: br } =
+      computePositionBounds(newWallW, gate.width, newWallObjs, gate.id);
+    if (max < min) return;
+    const newPosX = snapToNearestValid(SIDE_MARGIN, br, min, max);
+    updateGate(gate.id, { wall: newWall, positionX: newPosX });
   }
 
   return (
@@ -85,11 +140,22 @@ function GateEditor({ gate }: { gate: GateConfig }) {
             columns={3}
           />
 
+          {/* Wall selector */}
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs text-slate-400">Ściana</span>
+            <RadioGroup
+              value={gate.wall}
+              options={WALL_OPTIONS}
+              onChange={tryUpdateWall}
+              columns={4}
+            />
+          </div>
+
           <ConfigSlider
             label={limits.width.label}
             value={gate.width}
             min={limits.width.min}
-            max={Math.min(limits.width.max, useConfigStore.getState().config.dimensions.width - 0.6)}
+            max={maxWidth}
             step={limits.width.step}
             unit={limits.width.unit}
             onChange={tryUpdateWidth}
@@ -98,11 +164,24 @@ function GateEditor({ gate }: { gate: GateConfig }) {
             label={limits.height.label}
             value={gate.height}
             min={limits.height.min}
-            max={Math.min(limits.height.max, useConfigStore.getState().config.dimensions.height - 0.2)}
+            max={maxHeight}
             step={limits.height.step}
             unit={limits.height.unit}
             onChange={v => updateGate(gate.id, { height: v })}
           />
+
+          {/* Position slider — only useful when there is room to move */}
+          {posMax > posMin && (
+            <ConfigSlider
+              label={`Pozycja (od lewej — ${WALL_LABELS[gate.wall]})`}
+              value={gate.positionX}
+              min={posMin}
+              max={posMax}
+              step={0.05}
+              unit="m"
+              onChange={tryUpdatePosition}
+            />
+          )}
 
           <div className="flex flex-col gap-1.5">
             <span className="text-xs text-slate-400">Kierunek otwierania</span>
