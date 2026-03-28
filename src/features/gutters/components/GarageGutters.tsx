@@ -11,9 +11,12 @@ const WALL_T   = 0.002;  // wall thickness = 0.2 cm
 const INNER_R  = OUTER_R - WALL_T;
 
 // Downspout (rura spustowa) — round pipe
-const PIPE_R   = 0.035;  // radius → Ø 7 cm
-const PIPE_SEG = 16;
-const PIPE_GAP = 0.025;  // gap from gutter face to pipe centre
+const PIPE_R    = 0.03;   // radius → Ø 6 cm
+const PIPE_SEG  = 16;
+const PIPE_INSET = 0.05;  // inset downspout 5 cm from gutter end
+const PIPE_OVERLAP = 0.02; // let pipe slightly intersect the gutter body
+const GUTTER_DROP = 0.07; // lower trough 7 cm below eave line
+const END_CAP_DEPTH = 0.008;
 
 /**
  * Half-round gutter cross-section profile (opening facing +Y).
@@ -26,6 +29,15 @@ const GUTTER_PROFILE: THREE.Shape = (() => {
   s.absarc(0, 0, OUTER_R, 0, Math.PI, true);   // outer arc CW → bottom
   s.lineTo(-INNER_R, 0);
   s.absarc(0, 0, INNER_R, Math.PI, 0, false);  // inner arc CCW → back to right
+  s.closePath();
+  return s;
+})();
+
+const END_CAP_PROFILE: THREE.Shape = (() => {
+  const s = new THREE.Shape();
+  s.moveTo(OUTER_R, 0);
+  s.absarc(0, 0, OUTER_R, 0, Math.PI, true);
+  s.lineTo(OUTER_R, 0);
   s.closePath();
   return s;
 })();
@@ -127,6 +139,16 @@ export default function GarageGutters() {
   }), [eaves]);
   useEffect(() => () => { troughGeoms.forEach(g => g.dispose()); }, [troughGeoms]);
 
+  const endCapGeom = useMemo(() => {
+    const g = new THREE.ExtrudeGeometry(END_CAP_PROFILE, {
+      depth: END_CAP_DEPTH,
+      bevelEnabled: false,
+    });
+    g.translate(0, 0, -END_CAP_DEPTH / 2);
+    return g;
+  }, []);
+  useEffect(() => () => { endCapGeom.dispose(); }, [endCapGeom]);
+
   if (!gutters.enabled || eaves.length === 0) return null;
 
   return (
@@ -134,27 +156,25 @@ export default function GarageGutters() {
       {eaves.map((eave, i) => {
         const isAlongZ = eave.axis === 'z';
         const halfSpan = eave.span / 2;
-        const pipeHeight = eave.yEave; // downspout runs from ground (y=0) to trough opening
-
-        // Offset so downspout hugs the outside face of the wall/eave
-        const offsetX = isAlongZ ? (eave.cx > 0 ? PIPE_GAP : -PIPE_GAP) : 0;
-        const offsetZ = isAlongZ ? 0 : (eave.cz > 0 ? PIPE_GAP : -PIPE_GAP);
+        const troughTopY = eave.yEave - GUTTER_DROP;
+        const troughBottomY = troughTopY - OUTER_R;
+        const pipeHeight = Math.max(troughBottomY + PIPE_OVERLAP, 0.01);
 
         // Downspout positions at the drain end(s) of each trough
         const pipes: { x: number; z: number }[] = [];
         if (isAlongZ) {
           const drainZ = gutters.drainSide === 'front'
-            ? eave.cz + halfSpan   // +Z end = front face of garage
-            : eave.cz - halfSpan;  // -Z end = back face
+            ? eave.cz + halfSpan - PIPE_INSET   // +Z end = front face of garage
+            : eave.cz - halfSpan + PIPE_INSET;  // -Z end = back face
           pipes.push({ x: eave.cx, z: drainZ });
         } else {
           if (gutters.downspout === 'both') {
-            pipes.push({ x: eave.cx - halfSpan, z: eave.cz });
-            pipes.push({ x: eave.cx + halfSpan, z: eave.cz });
+            pipes.push({ x: eave.cx - halfSpan + PIPE_INSET, z: eave.cz });
+            pipes.push({ x: eave.cx + halfSpan - PIPE_INSET, z: eave.cz });
           } else {
             const drainX = gutters.downspout === 'left'
-              ? eave.cx - halfSpan
-              : eave.cx + halfSpan;
+              ? eave.cx - halfSpan + PIPE_INSET
+              : eave.cx + halfSpan - PIPE_INSET;
             pipes.push({ x: drainX, z: eave.cz });
           }
         }
@@ -165,7 +185,27 @@ export default function GarageGutters() {
             <mesh
               geometry={troughGeoms[i]}
               material={material}
-              position={[eave.cx, eave.yEave, eave.cz]}
+              position={[eave.cx, troughTopY, eave.cz]}
+              castShadow
+            />
+
+            <mesh
+              geometry={endCapGeom}
+              material={material}
+              position={isAlongZ
+                ? [eave.cx, troughTopY, eave.cz - halfSpan + END_CAP_DEPTH / 2]
+                : [eave.cx - halfSpan + END_CAP_DEPTH / 2, troughTopY, eave.cz]}
+              rotation={isAlongZ ? [0, Math.PI, 0] : [0, -Math.PI / 2, 0]}
+              castShadow
+            />
+
+            <mesh
+              geometry={endCapGeom}
+              material={material}
+              position={isAlongZ
+                ? [eave.cx, troughTopY, eave.cz + halfSpan - END_CAP_DEPTH / 2]
+                : [eave.cx + halfSpan - END_CAP_DEPTH / 2, troughTopY, eave.cz]}
+              rotation={isAlongZ ? [0, 0, 0] : [0, Math.PI / 2, 0]}
               castShadow
             />
 
@@ -174,7 +214,7 @@ export default function GarageGutters() {
               <mesh
                 key={j}
                 material={material}
-                position={[pipe.x + offsetX, pipeHeight / 2, pipe.z + offsetZ]}
+                position={[pipe.x, pipeHeight / 2, pipe.z]}
                 castShadow
               >
                 <cylinderGeometry args={[PIPE_R, PIPE_R, pipeHeight, PIPE_SEG]} />

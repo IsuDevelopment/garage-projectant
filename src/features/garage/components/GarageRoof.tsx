@@ -12,6 +12,16 @@ export default function GarageRoof() {
   const globalMat = useConfigStore(s => s.config.construction.material);
 
   const roofMat = effectiveMaterial(roof.material, globalMat);
+  const roofSpriteMaterialConfig = useMemo(() => {
+    if (roofMat.type !== 'trapez') return roofMat;
+    return {
+      ...roofMat,
+      subOptions: {
+        ...(roofMat.subOptions ?? {}),
+        orientation: 'vertical',
+      },
+    };
+  }, [roofMat]);
 
   const geo = useMemo(
     () => buildRoofGeometry(dim, roof.slopeType, roof.pitch),
@@ -21,7 +31,7 @@ export default function GarageRoof() {
   // UV coordinates in geometry.ts are already expressed in world-units / TILE_SIZE,
   // so texture.repeat must stay at 1×1 (no extra scaling here).
   const material = useSpriteMaterial({
-    config: roofMat,
+    config: roofSpriteMaterialConfig,
     worldWidth: 1,
     worldHeight: 1,
     tileSize: 1,

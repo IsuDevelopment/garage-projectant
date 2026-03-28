@@ -28,6 +28,7 @@ export function MaterialPicker({
   const effective = value ?? globalMaterial ?? { type: 'trapez' as MaterialType, color: '#c0c8d0' };
   const ref = useRef<HTMLDivElement>(null);
   const { colors, materials } = useSettingsContext();
+  const shouldForceVerticalRoofTrapez = element === 'roof' && effective.type === 'trapez';
 
   const availableMaterials = useMemo(
     () => materials.filter(m => {
@@ -52,10 +53,14 @@ export function MaterialPicker({
 
   function setMaterialType(t: MaterialType) {
     const def = materials.find(m => m.slug === t);
-    const subOptions = def?.subFeatures?.reduce((acc, sf) => {
+    let subOptions = def?.subFeatures?.reduce((acc, sf) => {
       acc[sf.slug] = sf.default;
       return acc;
     }, {} as Record<string, string | number>);
+
+    if (element === 'roof' && t === 'trapez') {
+      (subOptions ??= {}).orientation = 'vertical';
+    }
 
     onChange({
       ...effective,
@@ -71,6 +76,8 @@ export function MaterialPicker({
   }
 
   function setSubOption(slug: string, val: string | number) {
+    if (shouldForceVerticalRoofTrapez && slug === 'orientation') return;
+
     onChange({
       ...effective,
       subOptions: {
@@ -79,6 +86,12 @@ export function MaterialPicker({
       },
     });
   }
+
+  const visibleSubFeatures = useMemo(() => {
+    if (!activeDef?.subFeatures?.length) return [];
+    if (!shouldForceVerticalRoofTrapez) return activeDef.subFeatures;
+    return activeDef.subFeatures.filter(sf => sf.slug !== 'orientation');
+  }, [activeDef?.subFeatures, shouldForceVerticalRoofTrapez]);
 
   return (
     <div className="flex flex-col gap-2" ref={ref}>
@@ -99,26 +112,34 @@ export function MaterialPicker({
       </div>
 
       {/* Texture selector */}
-      <div className="grid grid-cols-3 gap-1.5">
+      <div className="flex flex-col gap-1">
         {availableMaterials.map(m => (
           <button
             key={m.slug}
             onClick={() => setMaterialType(m.slug)}
-            className={`py-1.5 px-2 rounded text-[11px] font-medium border transition-all
-              ${effective.type === m.slug
-                ? 'border-amber-400 bg-amber-400/10 text-amber-400'
-                : 'border-slate-600 bg-slate-800 text-slate-400 hover:border-slate-500'
+            className={`flex items-center justify-between gap-2 px-3 py-2 rounded text-[11px] font-medium border transition-all
+              ${m.isPremium
+                ? effective.type === m.slug
+                  ? 'border-amber-400 bg-amber-400/15 text-amber-300'
+                  : 'border-amber-700/60 bg-amber-950/30 text-amber-200/70 hover:border-amber-500 hover:text-amber-200'
+                : effective.type === m.slug
+                  ? 'border-amber-400 bg-amber-400/10 text-amber-400'
+                  : 'border-slate-600 bg-slate-800 text-slate-400 hover:border-slate-500'
               }`}
           >
-            <span>{MATERIAL_LABELS[m.slug] ?? m.slug}</span>
-            {m.isPremium && <span className="ml-1 text-[9px] uppercase">Premium</span>}
+            <span className="leading-tight text-left">{MATERIAL_LABELS[m.slug] ?? m.slug}</span>
+            {m.isPremium && (
+              <span className="flex-shrink-0 flex items-center gap-0.5 bg-amber-500 text-slate-950 text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-full leading-none whitespace-nowrap">
+                ✦ Premium
+              </span>
+            )}
           </button>
         ))}
       </div>
 
-      {activeDef?.subFeatures?.length ? (
+      {visibleSubFeatures.length ? (
         <div className="flex flex-col gap-2">
-          {activeDef.subFeatures.map(sf => (
+          {visibleSubFeatures.map(sf => (
             <div key={sf.slug} className="flex flex-col gap-1">
               <span className="text-xs text-slate-400">{sf.name}</span>
               {sf.type === 'select' ? (

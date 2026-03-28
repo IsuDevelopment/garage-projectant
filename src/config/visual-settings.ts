@@ -29,6 +29,15 @@ export const visualSettingsSchema = z.object({
   }),
   clouds: z.array(cloudSchema),
   trees: z.array(treeSchema),
+  cloudMotion: z.object({
+    driftMin: z.number().min(0),
+    driftMax: z.number().min(0),
+    bounceMin: z.number().min(0),
+    bounceMax: z.number().min(0),
+    bobSpeedMin: z.number().min(0),
+    bobSpeedMax: z.number().min(0),
+    wrapHalfWidth: z.number().positive(),
+  }).optional(),
 });
 
 export type VisualSettingsInput = z.infer<typeof visualSettingsSchema>;

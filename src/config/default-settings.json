@@ -162,7 +162,16 @@
       { "type": "deciduous", "position": [18, 0, -5], "crownColor": "#60C050", "trunkColor": "#7A5230", "scale": 0.95 },
       { "type": "deciduous", "position": [-14, 0, 10], "crownColor": "#4FAA3A", "scale": 0.85 },
       { "type": "deciduous", "position": [13, 0, 10], "crownColor": "#55B040", "trunkColor": "#6B4A22" }
-    ]
+    ],
+    "cloudMotion": {
+      "driftMin": 0.7,
+      "driftMax": 1.5,
+      "bounceMin": 0.08,
+      "bounceMax": 0.25,
+      "bobSpeedMin": 0.25,
+      "bobSpeedMax": 0.6,
+      "wrapHalfWidth": 70
+    }
   },
 
   "roofFelt": {

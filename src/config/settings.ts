@@ -150,6 +150,20 @@ export interface CloudVisualConfig {
   position: [number, number, number];
 }
 
+export interface CloudMotionConfig {
+  /** Horizontal drift speed range in world units per second */
+  driftMin: number;
+  driftMax: number;
+  /** Vertical bob amplitude range in world units */
+  bounceMin: number;
+  bounceMax: number;
+  /** Vertical bob frequency range */
+  bobSpeedMin: number;
+  bobSpeedMax: number;
+  /** Half-width of the wrap zone on X axis */
+  wrapHalfWidth: number;
+}
+
 export interface TreeVisualConfig {
   type: 'conifer' | 'deciduous';
   position: [number, number, number];
@@ -164,6 +178,7 @@ export interface VisualEnvironmentConfig {
   sky: SkyGradientConfig;
   clouds: CloudVisualConfig[];
   trees: TreeVisualConfig[];
+  cloudMotion?: CloudMotionConfig;
 }
 
 // ─── Default settings (sourced from JSON for future API loading) ─────────────
