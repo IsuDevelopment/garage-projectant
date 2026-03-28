@@ -11,6 +11,8 @@ import { DEFAULT_SETTINGS, type ConfiguratorSettings } from '@/config/settings';
 import GarageModel from './GarageModel';
 import GroundPlane from './GroundPlane';
 import ViewControls from './ViewControls';
+import SkyEnvironment from './SkyEnvironment';
+import TreeModels from './TreeModels';
 
 interface GarageSceneProps {
   settings?: ConfiguratorSettings;
@@ -19,7 +21,10 @@ interface GarageSceneProps {
 export default function GarageScene({ settings = DEFAULT_SETTINGS }: GarageSceneProps) {
   const dim = useConfigStore(s => s.config.dimensions);
   const setSelectedGate = useUIStore(s => s.setSelectedGate);
+  const showSky   = useUIStore(s => s.showSky);
+  const showTrees = useUIStore(s => s.showTrees);
   const controlsRef = useRef<OrbitControlsImpl>(null);
+  const visual = settings.visual ?? DEFAULT_SETTINGS.visual!;
 
   // Camera target: centre of the garage (half-height)
   const targetY = dim.height / 2;
@@ -38,10 +43,13 @@ export default function GarageScene({ settings = DEFAULT_SETTINGS }: GarageScene
         shadows
         gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 0.86 }}
         camera={{ position: [dim.width * 1.5, dim.height * 2, dim.depth * 2], fov: 45, near: 0.1, far: 300 }}
-        style={{ width: '100%', height: '100%', background: '#c9dff0' }}
+        style={{ width: '100%', height: '100%', background: showSky ? visual.backgroundColor : '#c9dff0' }}
         onClick={() => setSelectedGate(null)}
       >
         <Suspense fallback={null}>
+          {/* Scene background — overrides WebGL clear colour */}
+          <color attach="background" args={[showSky ? visual.backgroundColor : '#c9dff0']} />
+
           {/* Lighting */}
           <ambientLight intensity={0.42} />
           <directionalLight
@@ -63,12 +71,18 @@ export default function GarageScene({ settings = DEFAULT_SETTINGS }: GarageScene
           {/* Environment */}
           <Environment preset="city" />
 
+          {/* Sky + clouds */}
+          <SkyEnvironment config={visual} />
+
           {/* Ground */}
           <GroundPlane config={settings.ground} />
           <ContactShadows position={[0, 0.01, 0]} opacity={0.35} scale={24} blur={3.5} far={8} resolution={512} />
 
           {/* Garage */}
           <GarageModel />
+
+          {/* Trees */}
+          {showTrees && <TreeModels config={visual} />}
 
           {/* Camera controls with safety limits */}
           <OrbitControls

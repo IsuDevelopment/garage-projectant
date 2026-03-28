@@ -74,6 +74,9 @@ export interface ConfiguratorSettings {
   /** Ground plane appearance — swap per instance (grass, asphalt, concrete, …) */
   ground?: GroundConfig;
 
+  /** Visual environment around the garage scene */
+  visual?: VisualEnvironmentConfig;
+
   /** Roof felt underlay feature — optional; absent = feature hidden */
   roofFelt?: RoofFeltSettings;
 }
@@ -98,6 +101,43 @@ export interface GroundConfig {
   planeSize: number;
   /** Hex tint applied on top of the texture (e.g. '#ffffff' = no tint) */
   color: string;
+}
+
+export interface SkyGradientConfig {
+  /** Dome radius in world units */
+  radius: number;
+  /** Strongest blue at the top of the dome */
+  topColor: string;
+  /** Transition blue in the middle band */
+  midColor: string;
+  /** Lightest blue near the horizon */
+  horizonColor: string;
+}
+
+export interface CloudVisualConfig {
+  seed: number;
+  bounds: [number, number, number];
+  volume: number;
+  color: string;
+  opacity: number;
+  speed: number;
+  position: [number, number, number];
+}
+
+export interface TreeVisualConfig {
+  type: 'conifer' | 'deciduous';
+  position: [number, number, number];
+  scale?: number;
+  crownColor?: string;
+  trunkColor?: string;
+}
+
+export interface VisualEnvironmentConfig {
+  /** Canvas clear color used behind the 3D sky dome */
+  backgroundColor: string;
+  sky: SkyGradientConfig;
+  clouds: CloudVisualConfig[];
+  trees: TreeVisualConfig[];
 }
 
 // ─── Default settings (sourced from JSON for future API loading) ─────────────

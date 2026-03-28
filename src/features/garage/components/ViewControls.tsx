@@ -20,8 +20,14 @@ export default function ViewControls({ controlsRef }: Props) {
   const [open, setOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
-  const hideRoof   = useUIStore(s => s.hideRoof);
-  const setHideRoof = useUIStore(s => s.setHideRoof);
+  const hideRoof    = useUIStore(s => s.hideRoof);
+  const setHideRoof  = useUIStore(s => s.setHideRoof);
+  const showSky      = useUIStore(s => s.showSky);
+  const setShowSky   = useUIStore(s => s.setShowSky);
+  const showClouds   = useUIStore(s => s.showClouds);
+  const setShowClouds = useUIStore(s => s.setShowClouds);
+  const showTrees    = useUIStore(s => s.showTrees);
+  const setShowTrees  = useUIStore(s => s.setShowTrees);
   const dim = useConfigStore(s => s.config.dimensions);
 
   // Close on outside click
@@ -71,6 +77,33 @@ export default function ViewControls({ controlsRef }: Props) {
                 className="w-4 h-4 accent-blue-600 rounded"
               />
               <span className="text-sm font-medium">Ukryj dach</span>
+            </label>
+            <label className="flex items-center gap-3 cursor-pointer select-none px-3 py-2 rounded-2xl border border-slate-200 hover:bg-slate-50 transition-colors">
+              <input
+                type="checkbox"
+                checked={showSky}
+                onChange={e => setShowSky(e.target.checked)}
+                className="w-4 h-4 accent-blue-600 rounded"
+              />
+              <span className="text-sm font-medium">Pokaż niebo</span>
+            </label>
+            <label className="flex items-center gap-3 cursor-pointer select-none px-3 py-2 rounded-2xl border border-slate-200 hover:bg-slate-50 transition-colors">
+              <input
+                type="checkbox"
+                checked={showClouds}
+                onChange={e => setShowClouds(e.target.checked)}
+                className="w-4 h-4 accent-blue-600 rounded"
+              />
+              <span className="text-sm font-medium">Pokaż chmury</span>
+            </label>
+            <label className="flex items-center gap-3 cursor-pointer select-none px-3 py-2 rounded-2xl border border-slate-200 hover:bg-slate-50 transition-colors">
+              <input
+                type="checkbox"
+                checked={showTrees}
+                onChange={e => setShowTrees(e.target.checked)}
+                className="w-4 h-4 accent-blue-600 rounded"
+              />
+              <span className="text-sm font-medium">Pokaż drzewa</span>
             </label>
           </div>
 

@@ -6,7 +6,6 @@ import { AccordionSection } from '@/shared/components/AccordionSection';
 import { RadioGroup } from '@/shared/components/RadioGroup';
 import { ConfigSlider } from '@/shared/components/ConfigSlider';
 import { MaterialPicker } from '@/features/materials/components/MaterialPicker';
-import { ColorPicker } from '@/shared/components/ColorPicker';
 import { useConfigStore } from '@/store/useConfigStore';
 import { useUIStore } from '@/store/useUIStore';
 import { GATE_TYPE_LABELS } from '@/config/settings';
@@ -122,15 +121,6 @@ function GateEditor({ gate }: { gate: GateConfig }) {
             element="gates"
             onChange={m => updateGate(gate.id, { material: m })}
             allowNull
-          />
-
-          {/* Color per gate */}
-          <ColorPicker
-            value={gate.color}
-            onChange={c => updateGate(gate.id, { color: c })}
-            presets={gs.colors.set}
-            allowCustomColor={gs.colors.allowCustomColor}
-            activeMaterial={(gate.material ?? globalMat).type}
           />
         </div>
       )}

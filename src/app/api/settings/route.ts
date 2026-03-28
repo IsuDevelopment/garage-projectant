@@ -1,16 +1,21 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
 import { DEFAULT_SETTINGS } from '@/config/settings';
+import { resolveVisualSettings } from '@/config/visual-settings';
 import { buildClientSettings } from '@/features/admin/utils/buildClientSettings';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   const apiKey = req.nextUrl.searchParams.get('apiKey');
+  const globalSettings = await prisma.globalSettings.findUnique({ where: { id: 'default' } });
 
   // No apiKey → return default settings (demo / marketing mode)
   if (!apiKey) {
-    return NextResponse.json(DEFAULT_SETTINGS, {
+    return NextResponse.json({
+      ...DEFAULT_SETTINGS,
+      visual: resolveVisualSettings(globalSettings?.visualSettings),
+    }, {
       headers: { 'Cache-Control': 'public, max-age=600' },
     });
   }
@@ -41,8 +46,9 @@ export async function GET(req: NextRequest) {
 
   const enabledFeatures = client.clientFeatures.map(cf => cf.feature);
   const settings = buildClientSettings(client.name, client.id, enabledFeatures);
+  const visual = resolveVisualSettings(globalSettings?.visualSettings, client.visualSettings);
 
-  return NextResponse.json(settings, {
+  return NextResponse.json({ ...settings, visual }, {
     headers: { 'Cache-Control': 'private, max-age=300' },
   });
 }

@@ -118,6 +118,57 @@ W `buildClientSettings` lista `materials` jest filtrowana na podstawie feature k
 
 ---
 
+## Ustawienia otoczenia sceny 3D
+
+Wygląd nieba, kolor tła, pozycje chmur i rozkład drzew są definiowane w `src/config/default-settings.json` pod kluczem `visual`.
+
+### Struktura konfiguracji
+
+```json
+"visual": {
+  "backgroundColor": "#8fd8ff",
+  "sky": {
+    "radius": 280,
+    "topColor": "#2f8fe8",
+    "midColor": "#6fc4ff",
+    "horizonColor": "#bfe8ff"
+  },
+  "clouds": [
+    {
+      "seed": 1,
+      "bounds": [8, 2, 4],
+      "volume": 14,
+      "color": "#f0f0f0",
+      "opacity": 0.6,
+      "speed": 0.08,
+      "position": [15, 12, -45]
+    }
+  ],
+  "trees": [
+    { "type": "conifer", "position": [-10, 0, -9], "scale": 1 },
+    { "type": "deciduous", "position": [13, 0, 10], "crownColor": "#55B040" }
+  ]
+}
+```
+
+### Pola
+
+| Pole | Typ | Opis |
+|---|---|---|
+| `visual.backgroundColor` | `string` | Kolor czyszczenia canvasa i fallback za kopułą nieba |
+| `visual.sky.radius` | `number` | Rozmiar kopuły gradientowego nieba |
+| `visual.sky.topColor` | `string` | Kolor zenitu |
+| `visual.sky.midColor` | `string` | Kolor przejściowy w środkowej strefie |
+| `visual.sky.horizonColor` | `string` | Kolor przy horyzoncie |
+| `visual.clouds[]` | `CloudVisualConfig[]` | Lista sztucznych chmur w tle |
+| `visual.trees[]` | `TreeVisualConfig[]` | Lista drzew do renderowania wokół garażu |
+
+### Zasada działania
+
+`GarageScene` czyta `settings.visual` z aktualnych ustawień klienta. Jeśli API nie zwróci jeszcze sekcji `visual`, scena użyje fallbacku z `DEFAULT_SETTINGS`, więc starsze payloady dalej działają bez zmian.
+
+---
+
 ## Learn More
 
 - [Next.js Documentation](https://nextjs.org/docs)

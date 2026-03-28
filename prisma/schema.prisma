@@ -80,12 +80,20 @@ model Client {
   apiKey    String   @unique @default(cuid())
   isActive  Boolean  @default(true)
   notes     String?
+  visualSettings Json?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   user            User?
   clientFeatures  ClientFeature[]
   apiKeyLogs      ApiKeyLog[]
+}
+
+model GlobalSettings {
+  id             String   @id @default("default")
+  visualSettings Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 // ─── Features (master list) ──────────────────────────────────────────────────
