@@ -130,6 +130,41 @@ export interface DoorConfig {
   material: MaterialConfig | null; // null = inherit from construction.material
 }
 
+// ─── Window ───────────────────────────────────────────────────────────────────
+export type WindowFinish = 'pcv' | 'aluminium';
+
+export interface WindowColorDefinition {
+  slug: string;
+  name: string;
+  color: string;
+}
+
+export interface WindowFinishDefinition {
+  slug: WindowFinish;
+  name: string;
+  colors: WindowColorDefinition[];
+}
+
+export interface WindowGlazingDefinition {
+  slug: string;
+  name: string;
+  chambers: 2 | 3;
+  price?: number;
+}
+
+export interface WindowConfig {
+  id: string;
+  typeSlug: string;   // matches WallObjectTypeDefinition.slug ('single' | 'double')
+  wall: WallSide;
+  positionX: number;  // offset from left edge of the wall (metres)
+  sillHeight: number; // bottom edge of the window from floor (metres)
+  width: number;      // metres
+  height: number;     // metres
+  glazingSlug: string;
+  finish: WindowFinish;
+  colorSlug: string;
+}
+
 export type WallObjectCategory = 'door' | 'window';
 
 export interface WallObjectSizePresetCm {
@@ -208,6 +243,7 @@ export interface GarageConfig {
   roof: RoofConfig;
   gates: GateConfig[];
   doors: DoorConfig[];
+  windows: WindowConfig[];
   construction: ConstructionConfig;
   gutters: GutterConfig;
   feltRoof: RoofFeltConfig;

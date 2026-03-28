@@ -388,6 +388,81 @@ Cała logika jest w `MaterialPicker.tsx` — żadnego hardkodowania per element/
 
 ---
 
+## Feature — Okna
+
+Okna są osobnym feature wall-object, podobnie jak drzwi i bramy. Wspierają:
+- typy: `single` i `double`
+- rozmiary presetowe (cm)
+- pozycję poziomą (`positionX`)
+- wysokość osadzenia od podłoża (`sillHeight`), z minimalną wartością 100 cm
+- wykończenie ramy: `pcv` lub `aluminium`
+- dedykowane kolory per wykończenie (na ten moment: antracyt, dąb, białe)
+- wariant szklenia: 2-komorowe lub 3-komorowe (z osobną ceną)
+
+### Struktura `windows` w JSON
+
+```json
+"windows": {
+  "maxCount": 8,
+  "minSillHeightCm": 100,
+  "maxSillHeightCm": 220,
+  "types": [
+    {
+      "slug": "single",
+      "name": "Jednoskrzydłowe",
+      "category": "window",
+      "sizes": [
+        { "name": "80×60", "width": 80, "height": 60 },
+        { "name": "100×60", "width": 100, "height": 60 }
+      ]
+    },
+    {
+      "slug": "double",
+      "name": "Dwuskrzydłowe",
+      "category": "window",
+      "sizes": [
+        { "name": "140×100", "width": 140, "height": 100 },
+        { "name": "160×100", "width": 160, "height": 100 }
+      ]
+    }
+  ],
+  "finishes": [
+    {
+      "slug": "pcv",
+      "name": "PCV",
+      "colors": [
+        { "slug": "anthracite", "name": "Antracyt", "color": "#4a4a4a" },
+        { "slug": "oak", "name": "Dąb", "color": "#8b6b3e" },
+        { "slug": "white", "name": "Białe", "color": "#ffffff" }
+      ]
+    }
+  ],
+  "glazings": [
+    { "slug": "double-2ch", "name": "2-komorowe", "chambers": 2, "price": 0 },
+    { "slug": "triple-3ch", "name": "3-komorowe", "chambers": 3, "price": 8 }
+  ]
+}
+```
+
+### Helpersy
+
+| Helper | Opis |
+|---|---|
+| `getWindowTypes(settings)` | Lista dostępnych typów okien |
+| `getWindowTypeDefinition(settings, slug)` | Definicja pojedynczego typu okna |
+| `getWindowMaxCount(settings)` | Maksymalna liczba okien |
+| `getWindowMinSillHeightCm(settings)` | Minimalna wysokość osadzenia okna od podłoża |
+| `getWindowMaxSillHeightCm(settings)` | Maksymalna wysokość osadzenia okna od podłoża |
+| `getWindowFinishes(settings)` | Lista wykończeń i kolorów dla ram |
+| `getWindowGlazings(settings)` | Lista wariantów szklenia wraz z cenami |
+
+### Kolizje i ograniczenia
+
+- Okna korzystają z tej samej logiki kolizji ściennych co drzwi i bramy (odstęp między obiektami + brak wyjścia poza ścianę).
+- Walidacja wymiarów uwzględnia `sillHeight + height`, więc okno nie może wyjść ponad wysokość ściany.
+
+---
+
 ## DB: 
 - Baza to PostgreSQL, zarządzana przez Prisma ORM.
 - Schemat znajduje się w `prisma/schema.prisma` i zawiera tabele dla klientów, ustawień, feature'ów i planów subskrypcyjnych.

@@ -7,6 +7,7 @@ import GarageWalls from './GarageWalls';
 import GarageRoof from './GarageRoof';
 import GateModel from '@/features/gate/components/GateModel';
 import DoorModel from '@/features/doors/components/DoorModel';
+import WindowModel from '@/features/windows/components/WindowModel';
 import GarageGutters from '@/features/gutters/components/GarageGutters';
 import GarageAdditionalFeatures from '@/features/additional-services/components/GarageAdditionalFeatures';
 
@@ -39,6 +40,15 @@ export default function GarageModel() {
               <Suspense key={door.id} fallback={null}>
                 <DoorModel
                   door={door}
+                  garageWidth={W}
+                  garageDepth={D}
+                />
+              </Suspense>
+            ))}
+            {config.windows.map(windowObj => (
+              <Suspense key={windowObj.id} fallback={null}>
+                <WindowModel
+                  windowObj={windowObj}
                   garageWidth={W}
                   garageDepth={D}
                 />

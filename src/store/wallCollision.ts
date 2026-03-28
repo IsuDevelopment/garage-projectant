@@ -13,6 +13,7 @@ export const WALL_LABELS: Record<WallSide, string> = {
 export interface WallObjectBounds {
   id:        string;
   positionX: number;
+  bottomY?:  number;
   width:     number;
   height:    number;
   wall:      WallSide;
@@ -89,10 +90,13 @@ export function findDimensionCollisions(
 ): WallObjectBounds[] {
   return objects.filter(obj => {
     const wallW = wallWidthForSide(newDimensions, obj.wall);
+    const bottomY = obj.bottomY ?? 0;
+    const topY = bottomY + obj.height;
     return (
       obj.positionX + obj.width > wallW - SIDE_MARGIN ||
       obj.positionX < SIDE_MARGIN ||
-      obj.height > newDimensions.height - 0.2
+      bottomY < 0 ||
+      topY > newDimensions.height - 0.2
     );
   });
 }

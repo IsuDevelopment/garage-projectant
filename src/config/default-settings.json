@@ -193,6 +193,70 @@
     ]
   },
 
+  "windows": {
+    "maxCount": 8,
+    "minSillHeightCm": 100,
+    "maxSillHeightCm": 220,
+    "types": [
+      {
+        "slug": "single",
+        "name": "Jednoskrzydłowe",
+        "category": "window",
+        "price": 0,
+        "sizes": [
+          { "name": "80×60", "width": 80, "height": 60 },
+          { "name": "100×60", "width": 100, "height": 60 },
+          { "name": "120×90", "width": 120, "height": 90 }
+        ]
+      },
+      {
+        "slug": "double",
+        "name": "Dwuskrzydłowe",
+        "category": "window",
+        "price": 0,
+        "sizes": [
+          { "name": "140×100", "width": 140, "height": 100 },
+          { "name": "160×100", "width": 160, "height": 100 },
+          { "name": "180×120", "width": 180, "height": 120 }
+        ]
+      }
+    ],
+    "finishes": [
+      {
+        "slug": "pcv",
+        "name": "PCV",
+        "colors": [
+          { "slug": "anthracite", "name": "Antracyt", "color": "#4a4a4a" },
+          { "slug": "oak", "name": "Dąb", "color": "#8b6b3e" },
+          { "slug": "white", "name": "Białe", "color": "#ffffff" }
+        ]
+      },
+      {
+        "slug": "aluminium",
+        "name": "Aluminium",
+        "colors": [
+          { "slug": "anthracite", "name": "Antracyt", "color": "#3f3f46" },
+          { "slug": "oak", "name": "Dąb", "color": "#7a5a34" },
+          { "slug": "white", "name": "Białe", "color": "#f8fafc" }
+        ]
+      }
+    ],
+    "glazings": [
+      {
+        "slug": "double-2ch",
+        "name": "2-komorowe",
+        "chambers": 2,
+        "price": 0
+      },
+      {
+        "slug": "triple-3ch",
+        "name": "3-komorowe",
+        "chambers": 3,
+        "price": 8
+      }
+    ]
+  },
+
   "customSprites": {},
 
   "colors": {

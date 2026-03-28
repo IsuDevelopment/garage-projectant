@@ -7,6 +7,7 @@ import { DimensionsPanel } from '@/features/dimensions/components/DimensionsPane
 import { RoofPanel } from '@/features/roof/components/RoofPanel';
 import { GatesPanel } from '@/features/gate/components/GatesPanel';
 import { DoorsPanel } from '@/features/doors/components/DoorsPanel';
+import { WindowsPanel } from '@/features/windows/components/WindowsPanel';
 import { ConstructionPanel } from '@/features/construction/components/ConstructionPanel';
 import { GutterPanel } from '@/features/gutters/components/GutterPanel';
 import { AdditionalServicesPanel } from '@/features/additional-services/components/AdditionalServicesPanel';
@@ -19,6 +20,8 @@ import { GarageExpandDialog } from '@/shared/components/GarageExpandDialog';
 import { getAvailableProfiles, getAvailableRoofSlopes, getElementBinding, getGateTypes } from '@/config/settings';
 import type { ConfiguratorSettings } from '@/config/settings';
 import { getDoorTypes } from '@/config/settings';
+import { getWindowTypes } from '@/config/settings';
+import { getWindowGlazings } from '@/config/settings';
 import type { GateType, MaterialType } from '@/store/types';
 
 // Canvas must be client-only — no SSR
@@ -39,7 +42,9 @@ function sanitizeConfigToSettings(settings: ConfiguratorSettings) {
   const roofSlopes = getAvailableRoofSlopes(settings);
   const profiles = getAvailableProfiles(settings);
   const gateTypes = getGateTypes(settings).map(t => t.slug);
-    const doorTypes = getDoorTypes(settings).map(t => t.slug);
+  const doorTypes = getDoorTypes(settings).map(t => t.slug);
+  const windowTypes = getWindowTypes(settings).map(t => t.slug);
+  const windowGlazings = getWindowGlazings(settings).map(g => g.slug);
   const wallsBinding = getElementBinding(settings, 'walls');
   const roofBinding = getElementBinding(settings, 'roof');
   const gatesBinding = getElementBinding(settings, 'gates');
@@ -167,13 +172,25 @@ function sanitizeConfigToSettings(settings: ConfiguratorSettings) {
   // Additional services
   const additionalSettings = (settings.additionalFeatures ?? []).filter(feature => feature.enabled !== false);
 
-    // Door types
-    config.doors?.forEach(door => {
-      if (doorTypes.length && !doorTypes.includes(door.typeSlug)) {
-        const fallback = doorTypes[0];
-        if (fallback) patches.push(() => store.updateDoor(door.id, { typeSlug: fallback }));
-      }
-    });
+  // Door types
+  config.doors?.forEach(door => {
+    if (doorTypes.length && !doorTypes.includes(door.typeSlug)) {
+      const fallback = doorTypes[0];
+      if (fallback) patches.push(() => store.updateDoor(door.id, { typeSlug: fallback }));
+    }
+  });
+
+  // Window types
+  config.windows?.forEach(windowObj => {
+    if (windowTypes.length && !windowTypes.includes(windowObj.typeSlug)) {
+      const fallback = windowTypes[0];
+      if (fallback) patches.push(() => store.updateWindow(windowObj.id, { typeSlug: fallback }));
+    }
+    if (windowGlazings.length && !windowGlazings.includes(windowObj.glazingSlug)) {
+      const fallback = windowGlazings[0];
+      if (fallback) patches.push(() => store.updateWindow(windowObj.id, { glazingSlug: fallback }));
+    }
+  });
 
   const additionalMap = new Map(additionalSettings.map(f => [f.slug, f]));
 
@@ -255,7 +272,8 @@ function ConfiguratorInner() {
   const config = useConfigStore(s => s.config);
   const applyPendingDimensions = useConfigStore(s => s.applyPendingDimensions);
   const removeGate = useConfigStore(s => s.removeGate);
-    const removeDoor = useConfigStore(s => s.removeDoor);
+  const removeDoor = useConfigStore(s => s.removeDoor);
+  const removeWindow = useConfigStore(s => s.removeWindow);
   const setWidth  = useConfigStore(s => s.setWidth);
   const setDepth  = useConfigStore(s => s.setDepth);
   const setHeight = useConfigStore(s => s.setHeight);
@@ -272,6 +290,7 @@ function ConfiguratorInner() {
     collisionDialog.conflicts.forEach(c => {
       removeGate(c.id);
       removeDoor(c.id);
+      removeWindow(c.id);
     });
     applyPendingDimensions(collisionDialog.pendingDimensions);
     closeCollisionDialog();
@@ -364,6 +383,7 @@ function ConfiguratorInner() {
           <GatesPanel />
           <ConstructionPanel />
                     <DoorsPanel />
+          <WindowsPanel />
           <GutterPanel />
           {hasAdditionalServices && <AdditionalServicesPanel />}
         </div>

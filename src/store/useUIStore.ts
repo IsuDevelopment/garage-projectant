@@ -33,6 +33,7 @@ export interface ExpandGarageDialogState {
 interface UIState {
   selectedGateId: string | null;
   selectedDoorId: string | null;
+  selectedWindowId: string | null;
   activePanel: 'dimensions' | 'roof' | 'gates' | 'construction';
   hideRoof: boolean;
   showSky: boolean;
@@ -42,6 +43,7 @@ interface UIState {
   expandGarageDialog: ExpandGarageDialogState;
   setSelectedGate:        (id: string | null) => void;
   setSelectedDoor:        (id: string | null) => void;
+  setSelectedWindow:      (id: string | null) => void;
   setActivePanel:         (panel: UIState['activePanel']) => void;
   setHideRoof:            (hide: boolean) => void;
   setShowSky:             (show: boolean) => void;
@@ -61,6 +63,7 @@ const EXPAND_CLOSED: ExpandGarageDialogState = {
 export const useUIStore = create<UIState>()((set) => ({
   selectedGateId: null,
   selectedDoorId: null,
+  selectedWindowId: null,
   activePanel: 'dimensions',
   hideRoof: false,
   showSky: true,
@@ -70,6 +73,7 @@ export const useUIStore = create<UIState>()((set) => ({
   expandGarageDialog: { ...EXPAND_CLOSED },
   setSelectedGate:      (id)     => set({ selectedGateId: id }),
   setSelectedDoor:      (id)     => set({ selectedDoorId: id }),
+  setSelectedWindow:    (id)     => set({ selectedWindowId: id }),
   setActivePanel:       (panel)  => set({ activePanel: panel }),
   setHideRoof:          (hide)   => set({ hideRoof: hide }),
   setShowSky:           (show)   => set({ showSky: show }),

@@ -11,6 +11,8 @@ import {
   GateType,
   ProfileType,
   MaterialElement,
+  WindowFinishDefinition,
+  WindowGlazingDefinition,
   WallObjectTypeDefinition,
 } from '@/store/types';
 import defaultSettingsJson from './default-settings.json';
@@ -88,6 +90,15 @@ export interface DoorSettings {
   types: WallObjectTypeDefinition[];
 }
 
+export interface WindowSettings {
+  maxCount: number;
+  minSillHeightCm: number;
+  maxSillHeightCm: number;
+  types: WallObjectTypeDefinition[];
+  finishes: WindowFinishDefinition[];
+  glazings: WindowGlazingDefinition[];
+}
+
 // ─── Configurator settings (static Phase 1, from API Phase 2) ─────────────────
 export interface ConfiguratorSettings {
   id: string;
@@ -120,6 +131,9 @@ export interface ConfiguratorSettings {
 
   /** Door catalog with per-type preset sizes */
   doors?: DoorSettings;
+
+  /** Window catalog with size presets and dedicated finish/color system */
+  windows?: WindowSettings;
 
   /** Global sub-feature registry referenced by materials via slugs */
   subFeatures?: MaterialSubFeatureDefinition[];
@@ -445,4 +459,36 @@ export function getDoorTypeDefinition(
 
 export function getDoorMaxCount(settings: ConfiguratorSettings): number {
   return settings.doors?.maxCount ?? 4;
+}
+
+// ─── Window helpers ───────────────────────────────────────────────────────────
+export function getWindowTypes(settings: ConfiguratorSettings): WallObjectTypeDefinition[] {
+  return settings.windows?.types ?? [];
+}
+
+export function getWindowTypeDefinition(
+  settings: ConfiguratorSettings,
+  typeSlug: string,
+): WallObjectTypeDefinition | undefined {
+  return settings.windows?.types.find(t => t.slug === typeSlug);
+}
+
+export function getWindowMaxCount(settings: ConfiguratorSettings): number {
+  return settings.windows?.maxCount ?? 8;
+}
+
+export function getWindowMinSillHeightCm(settings: ConfiguratorSettings): number {
+  return settings.windows?.minSillHeightCm ?? 100;
+}
+
+export function getWindowMaxSillHeightCm(settings: ConfiguratorSettings): number {
+  return settings.windows?.maxSillHeightCm ?? 220;
+}
+
+export function getWindowFinishes(settings: ConfiguratorSettings): WindowFinishDefinition[] {
+  return settings.windows?.finishes ?? [];
+}
+
+export function getWindowGlazings(settings: ConfiguratorSettings): WindowGlazingDefinition[] {
+  return settings.windows?.glazings ?? [];
 }
