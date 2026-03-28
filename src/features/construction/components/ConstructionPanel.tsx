@@ -5,7 +5,7 @@ import { AccordionSection } from '@/shared/components/AccordionSection';
 import { RadioGroup } from '@/shared/components/RadioGroup';
 import { MaterialPicker } from '@/features/materials/components/MaterialPicker';
 import { useConfigStore } from '@/store/useConfigStore';
-import { PROFILE_LABELS } from '@/config/settings';
+import { getAvailableProfiles, PROFILE_LABELS } from '@/config/settings';
 import { useSettingsContext } from '@/config/SettingsContext';
 import { ProfileType } from '@/store/types';
 
@@ -16,7 +16,7 @@ export function ConstructionPanel() {
   const setGalvanized           = useConfigStore(s => s.setGalvanized);
 
   const cs = useSettingsContext();
-  const profileOptions = cs.availableProfiles.map((v: ProfileType) => ({
+  const profileOptions = getAvailableProfiles(cs).map((v: ProfileType) => ({
     value: v,
     label: PROFILE_LABELS[v] ?? v,
   }));

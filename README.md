@@ -229,6 +229,165 @@ Sekcja `Uslugi dodatkowe` w sidebarze wyswietla sie tylko wtedy, gdy tablica zaw
 Wszystkie elementy korzystaja z lekkiej, proceduralnej tekstury chropowatego betonu.
 
 
+---
+
+## Model danych — wymiary i ograniczenia produkcyjne
+
+Konfigurator używa **dyskretnych zestawów wartości** (zamiast ciągłych suwaków) dla każdego wymiaru konstrukcji. Wartości są zdefiniowane w `src/config/default-settings.json` pod kluczem `construction.sizes` i odzwierciedlają rzeczywiste rozmiary produkcyjne.
+
+### Jednostki
+
+| Warstwa | Jednostka | Powód |
+|---|---|---|
+| JSON / UI (`settings.ts`) | **cm** | Czytelność dla projektantów i admina |
+| Zustand store | **m** | Three.js używa metrów |
+| Silnik 3D (Three.js / R3F) | **m** | Standard WebGL |
+
+Konwersja odbywa się wyłącznie w warstwie UI za pomocą `cmToMeters(v)` i `metersToCm(v)` z `src/config/settings.ts`.
+
+### Struktura `construction` w JSON
+
+```json
+"construction": {
+  "sizes": {
+    "width":  [300, 350, 400, ..., 1200],
+    "depth":  [300, 350, 400, ..., 1200],
+    "height": [213, 223, 233, ..., 313]
+  },
+  "defaults": {
+    "width": 600,
+    "depth": 600,
+    "height": 253
+  },
+  "profiles": ["30x30", "30x40", "40x40"]
+}
+```
+
+Helpersy w `settings.ts`:
+- `getConstructionSizeValuesCm(settings, axis)` — lista dozwolonych wartości CM dla danej osi
+- `getConstructionDefaultCm(settings, axis)` — wartość domyślna CM
+- `getAvailableProfiles(settings)` — lista profili stali
+
+---
+
+## Model danych — typy bramek i rozmiary
+
+Każdy typ bram ma swój własny zestaw dostępnych rozmiarów. Zestaw jest definiowany per-typ pod kluczem `gates.types[]`.
+
+### Struktura `gates` w JSON
+
+```json
+"gates": {
+  "maxCount": 4,
+  "types": [
+    {
+      "slug": "tilt",
+      "name": "Uchylna",
+      "isPremium": false,
+      "sizes": {
+        "width":  [300, 350, 400, 450, 500],
+        "height": [190, 200, 210, ..., 350]
+      },
+      "price": 0
+    },
+    {
+      "slug": "sectional",
+      "name": "Segmentowa",
+      "isPremium": true,
+      "sizes": { ... },
+      "price": 0
+    }
+  ]
+}
+```
+
+### Helpersy
+
+| Helper | Opis |
+|---|---|
+| `getGateTypes(settings)` | Lista wszystkich definicji typów bramek |
+| `getGateTypeDefinition(settings, slug)` | Definicja konkretnego typu |
+| `getGateMaxCount(settings)` | Maksymalna liczba bram |
+
+### Dialog rozszerzenia garażu
+
+Gdy użytkownik wybiera typ bramki, który nie mieści się w obecnych wymiarach garażu, pojawia się dialog `GarageExpandDialog` (montowany w `ConfiguratorPage`). Dialog proponuje rozszerzenie wybranego wymiaru do najbliższej dozwolonej wartości produkcyjnej. Stan dialogu zarządzany jest przez `useUIStore` (`showExpandGarageDialog` / `closeExpandGarageDialog`).
+
+---
+
+## Model danych — materiały i kolory per element
+
+Materiały oraz kolory są konfigurowane jako **globalne rejestry** z **bindingami per element** (ściany, dach, bramy). Pozwala to na pełną kontrolę nad tym, które materiały i kolory są dostępne dla jakiego elementu, bez hardkodowania w komponentach.
+
+### Powiązania elementów (`elements`)
+
+```json
+"elements": {
+  "walls": {
+    "allowedMaterials": ["trapez", "rabek"],
+    "materialOverrides": {}
+  },
+  "roof": {
+    "allowedMaterials": ["trapez", "blachodachowka", "rabek"],
+    "availableSlopes": ["flat", "single", "double", "right"],
+    "pitch": { "flat": { "min": 0, "max": 0 }, "single": { "min": 3, "max": 30 } },
+    "materialOverrides": {
+      "trapez": {
+        "forcedValues": { "orientation": "vertical" },
+        "disabledSubFeatures": []
+      }
+    }
+  },
+  "gates": {
+    "allowedMaterials": ["trapez", "rabek"]
+  }
+}
+```
+
+### Działanie `materialOverrides`
+
+| Pole | Efekt |
+|---|---|
+| `forcedValues` | Wartości sub-opcji wymaganych przez binding (np. orientacja pion dla trapez na dachu). Sub-opcje objęte forced są ukryte w UI. |
+| `disabledSubFeatures` | Sub-opcje całkowicie wyłączone dla tego materiału+elementu. |
+
+Cała logika jest w `MaterialPicker.tsx` — żadnego hardkodowania per element/typ.
+
+### Rejestry kolorów (`colors.definitions`)
+
+```json
+"colors": {
+  "allowCustomColor": true,
+  "definitions": [
+    {
+      "slug": "galvanized",
+      "name": "Galwanizowana",
+      "color": "#c0c8d0",
+      "price": 0
+    },
+    {
+      "slug": "ral_anthracite",
+      "name": "Antracyt",
+      "color": "#4a4a4a",
+      "price": 2
+    }
+  ],
+  "set": [ ... ]
+}
+```
+
+### Helpersy
+
+| Helper | Opis |
+|---|---|
+| `getElementBinding(settings, element)` | Binding na dany element — z fallbackiem na `appliesTo` |
+| `getGlobalColorDefinitions(settings)` | Lista `ColorDefinition` z rejestru globalnego |
+| `getElementColorPresets(settings, element)` | Presety kolorów przefiltrowane dla elementu |
+| `getAvailableRoofSlopes(settings)` | Typy spadku dachu (z `elements.roof.availableSlopes`) |
+| `getRoofPitchLimits(settings, kind)` | Limity min/max kąta dla danego typu spadku |
+
+---
+
 ## DB: 
 - Baza to PostgreSQL, zarządzana przez Prisma ORM.
 - Schemat znajduje się w `prisma/schema.prisma` i zawiera tabele dla klientów, ustawień, feature'ów i planów subskrypcyjnych.

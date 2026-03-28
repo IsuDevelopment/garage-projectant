@@ -28,7 +28,7 @@ html, body {
 /* Resizable sidebar — width driven by --sidebar-w CSS variable (desktop only) */
 @media (min-width: 1024px) {
   .configurator-sidebar {
-    width: var(--sidebar-w, 340px);
+    width: var(--sidebar-w, 440px);
     min-width: 340px;
     max-width: 40dvw;
     flex-shrink: 0;

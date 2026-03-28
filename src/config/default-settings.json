@@ -8,6 +8,20 @@
     "depth":  { "min": 3,   "max": 15,  "step": 0.1, "default": 6,   "unit": "m", "label": "Głębokość" }
   },
 
+  "subFeatures": [
+    {
+      "slug": "orientation",
+      "name": "Kierunek przetłoczeń",
+      "type": "select",
+      "options": [
+        { "value": "vertical", "label": "Pion" },
+        { "value": "horizontal", "label": "Poziom" }
+      ],
+      "default": "vertical",
+      "price": 0
+    }
+  ],
+
   "materials": [
     {
       "slug": "trapez",
@@ -18,6 +32,7 @@
       "appliesTo": ["walls", "roof", "gates"],
       "isPremium": false,
       "allowColors": true,
+      "subFeatureSlugs": ["orientation"],
       "subFeatures": [
         {
           "slug": "orientation",
@@ -78,6 +93,106 @@
     "maxCount": 4
   },
 
+  "construction": {
+    "sizes": {
+      "width": [300, 350, 400, 450, 500, 550, 600, 650, 700, 750, 800, 850, 900, 950, 1000, 1050, 1100, 1150, 1200],
+      "depth": [300, 350, 400, 450, 500, 550, 580, 600, 650, 700, 750, 800, 850, 900, 950, 1000, 1050, 1100, 1150, 1200],
+      "height": [213, 223, 233, 243, 253, 263, 273, 283, 293, 303, 313]
+    },
+    "defaults": {
+      "width": 600,
+      "depth": 600,
+      "height": 253
+    },
+    "profiles": ["30x30", "30x40"]
+  },
+
+  "elements": {
+    "walls": {
+      "allowedMaterials": ["trapez", "rabek"],
+      "allowedColors": []
+    },
+    "roof": {
+      "allowedMaterials": ["trapez", "blachodachowka", "rabek"],
+      "allowedColors": [],
+      "availableSlopes": ["right", "left", "back", "front", "double", "double-front-back"],
+      "pitch": {
+        "single": { "mode": "range", "min": 2, "max": 10, "default": 5, "unit": "°", "label": "Kąt dachu" },
+        "double": { "mode": "values", "values": [10, 15, 20], "default": 15, "unit": "°", "label": "Kąt dachu" }
+      },
+      "materialOverrides": {
+        "trapez": {
+          "forcedValues": {
+            "orientation": "vertical"
+          }
+        }
+      }
+    },
+    "gates": {
+      "allowedMaterials": ["trapez", "rabek"],
+      "allowedColors": []
+    }
+  },
+
+  "gates": {
+    "maxCount": 4,
+    "types": [
+      {
+        "slug": "tilt",
+        "name": "Uchylna",
+        "sizes": {
+          "width": [300, 350],
+          "height": [190, 200, 210, 220, 230, 240, 250, 260, 270, 280, 290, 300, 310, 320, 330, 340, 350]
+        }
+      },
+      {
+        "slug": "double-wing",
+        "name": "Dwuskrzydłowa",
+        "sizes": {
+          "width": [300, 350],
+          "height": [190, 200, 210, 220, 230, 240, 250, 260, 270, 280, 290, 300, 310, 320, 330, 340, 350]
+        }
+      },
+      {
+        "slug": "sectional",
+        "name": "Segmentowa",
+        "isPremium": true,
+        "sizes": {
+          "width": [300, 350, 400, 450, 500, 550, 600],
+          "height": [190, 200, 210, 220, 230, 240, 250, 260, 270, 280, 290, 300, 310, 320, 330, 340, 350]
+        }
+      }
+    ]
+  },
+
+  "doors": {
+    "maxCount": 4,
+    "types": [
+      {
+        "slug": "single",
+        "name": "Jednoskrzydłowe",
+        "category": "door",
+        "price": 0,
+        "sizes": [
+          { "name": "80×190", "width": 80, "height": 190 },
+          { "name": "90×190", "width": 90, "height": 190 },
+          { "name": "100×190", "width": 100, "height": 190 }
+        ]
+      },
+      {
+        "slug": "double",
+        "name": "Dwuskrzydłowe",
+        "category": "door",
+        "price": 0,
+        "sizes": [
+          { "name": "120×200", "width": 120, "height": 200 },
+          { "name": "140×200", "width": 140, "height": 200 },
+          { "name": "160×200", "width": 160, "height": 200 }
+        ]
+      }
+    ]
+  },
+
   "customSprites": {},
 
   "colors": {
@@ -91,6 +206,16 @@
       { "slug": "anthracite",   "name": "Antracyt",      "color": "#4a4a4a" },
       { "slug": "cream",        "name": "Kremowa",       "color": "#f5f0e8" },
       { "slug": "white",        "name": "Biała",         "color": "#ffffff" }
+    ],
+    "definitions": [
+      { "slug": "galvanized", "name": "Galwanizowana", "color": "#c0c8d0", "price": 0 },
+      { "slug": "brown", "name": "Brązowa", "color": "#8b7355", "price": 2 },
+      { "slug": "dark-green", "name": "Ciemnozielona", "color": "#2d4a2d", "price": 2 },
+      { "slug": "brick-red", "name": "Ceglasta", "color": "#b22222", "price": 2 },
+      { "slug": "navy", "name": "Granatowa", "color": "#1a1a2e", "price": 2 },
+      { "slug": "anthracite", "name": "Antracyt", "color": "#4a4a4a", "price": 2 },
+      { "slug": "cream", "name": "Kremowa", "color": "#f5f0e8", "price": 1 },
+      { "slug": "white", "name": "Biała", "color": "#ffffff", "price": 1 }
     ]
   },
 

@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic';
 import { DimensionsPanel } from '@/features/dimensions/components/DimensionsPanel';
 import { RoofPanel } from '@/features/roof/components/RoofPanel';
 import { GatesPanel } from '@/features/gate/components/GatesPanel';
+import { DoorsPanel } from '@/features/doors/components/DoorsPanel';
 import { ConstructionPanel } from '@/features/construction/components/ConstructionPanel';
 import { GutterPanel } from '@/features/gutters/components/GutterPanel';
 import { AdditionalServicesPanel } from '@/features/additional-services/components/AdditionalServicesPanel';
@@ -14,8 +15,11 @@ import { useSettings } from '@/config/useSettings';
 import { useUIStore } from '@/store/useUIStore';
 import { SettingsProvider } from '@/config/SettingsContext';
 import { CollisionDialog } from '@/shared/components/CollisionDialog';
+import { GarageExpandDialog } from '@/shared/components/GarageExpandDialog';
+import { getAvailableProfiles, getAvailableRoofSlopes, getElementBinding, getGateTypes } from '@/config/settings';
 import type { ConfiguratorSettings } from '@/config/settings';
-import type { MaterialType } from '@/store/types';
+import { getDoorTypes } from '@/config/settings';
+import type { GateType, MaterialType } from '@/store/types';
 
 // Canvas must be client-only — no SSR
 const GarageScene = dynamic(() => import('@/features/garage/components/GarageScene'), {
@@ -32,13 +36,20 @@ function sanitizeConfigToSettings(settings: ConfiguratorSettings) {
   const config = store.config;
   const patches: (() => void)[] = [];
   const materialMap = new Map(settings.materials.map(m => [m.slug, m]));
+  const roofSlopes = getAvailableRoofSlopes(settings);
+  const profiles = getAvailableProfiles(settings);
+  const gateTypes = getGateTypes(settings).map(t => t.slug);
+    const doorTypes = getDoorTypes(settings).map(t => t.slug);
+  const wallsBinding = getElementBinding(settings, 'walls');
+  const roofBinding = getElementBinding(settings, 'roof');
+  const gatesBinding = getElementBinding(settings, 'gates');
 
   const firstFor = (element: 'walls' | 'roof' | 'gates') =>
-    settings.materials.find(m => m.appliesTo.includes(element));
+    settings.materials.find(m => getElementBinding(settings, element).allowedMaterials.includes(m.slug));
 
   const firstRoofForSlope = () =>
     settings.materials.find(m =>
-      m.appliesTo.includes('roof') && (!m.allowedSlopes || m.allowedSlopes.includes(config.roof.slopeType)),
+      roofBinding.allowedMaterials.includes(m.slug) && (!m.allowedSlopes || m.allowedSlopes.includes(config.roof.slopeType)),
     );
 
   const materialFromDef = (def: ConfiguratorSettings['materials'][number]) => ({
@@ -65,14 +76,14 @@ function sanitizeConfigToSettings(settings: ConfiguratorSettings) {
   const setAdditionalFeature = store.setAdditionalFeature;
 
   // Roof slope
-  if (!settings.availableRoofSlopes.includes(config.roof.slopeType)) {
-    const fallback = settings.availableRoofSlopes[0];
+  if (!roofSlopes.includes(config.roof.slopeType)) {
+    const fallback = roofSlopes[0];
     if (fallback) patches.push(() => store.setRoofSlope(fallback));
   }
 
   // Construction material (walls)
   const constructionDef = materialMap.get(config.construction.material.type);
-  if (!constructionDef || !constructionDef.appliesTo.includes('walls')) {
+  if (!constructionDef || !wallsBinding.allowedMaterials.includes(constructionDef.slug)) {
     const fallback = firstFor('walls');
     if (fallback) {
       patches.push(() => store.setConstructionMaterial({
@@ -92,8 +103,8 @@ function sanitizeConfigToSettings(settings: ConfiguratorSettings) {
   }
 
   // Profile type
-  if (!settings.availableProfiles.includes(config.construction.profileType)) {
-    const fallback = settings.availableProfiles[0];
+  if (!profiles.includes(config.construction.profileType)) {
+    const fallback = profiles[0];
     if (fallback) patches.push(() => store.setProfileType(fallback));
   }
 
@@ -102,7 +113,7 @@ function sanitizeConfigToSettings(settings: ConfiguratorSettings) {
     const roofMaterial = config.roof.material;
     const roofDef = materialMap.get(roofMaterial.type);
     const roofAllowed = roofDef
-      && roofDef.appliesTo.includes('roof')
+      && roofBinding.allowedMaterials.includes(roofDef.slug)
       && (!roofDef.allowedSlopes || roofDef.allowedSlopes.includes(config.roof.slopeType));
 
     if (!roofAllowed) {
@@ -116,7 +127,7 @@ function sanitizeConfigToSettings(settings: ConfiguratorSettings) {
   } else {
     const inheritedDef = materialMap.get(config.construction.material.type);
     const inheritedAllowed = inheritedDef
-      && inheritedDef.appliesTo.includes('roof')
+      && roofBinding.allowedMaterials.includes(inheritedDef.slug)
       && (!inheritedDef.allowedSlopes || inheritedDef.allowedSlopes.includes(config.roof.slopeType));
     if (!inheritedAllowed) {
       const fallback = firstRoofForSlope();
@@ -126,14 +137,14 @@ function sanitizeConfigToSettings(settings: ConfiguratorSettings) {
 
   // Gate types
   config.gates.forEach(gate => {
-    if (!settings.availableGateTypes.includes(gate.type)) {
-      const fallback = settings.availableGateTypes[0];
+    if (!gateTypes.includes(gate.type)) {
+      const fallback = gateTypes[0];
       if (fallback) patches.push(() => store.updateGate(gate.id, { type: fallback }));
     }
     if (gate.material) {
       const gateMaterial = gate.material;
       const gateDef = materialMap.get(gateMaterial.type);
-      if (!gateDef || !gateDef.appliesTo.includes('gates')) {
+      if (!gateDef || !gatesBinding.allowedMaterials.includes(gateDef.slug)) {
         patches.push(() => store.updateGate(gate.id, { material: null }));
       } else {
         const normalizedColor = normalizeColor(gateMaterial.type, gateMaterial.color);
@@ -143,7 +154,7 @@ function sanitizeConfigToSettings(settings: ConfiguratorSettings) {
       }
     } else {
       const inheritedDef = materialMap.get(config.construction.material.type);
-      const inheritedAllowed = inheritedDef && inheritedDef.appliesTo.includes('gates');
+      const inheritedAllowed = inheritedDef && gatesBinding.allowedMaterials.includes(inheritedDef.slug);
       if (!inheritedAllowed) {
         const fallback = firstFor('gates');
         if (fallback) {
@@ -155,6 +166,15 @@ function sanitizeConfigToSettings(settings: ConfiguratorSettings) {
 
   // Additional services
   const additionalSettings = (settings.additionalFeatures ?? []).filter(feature => feature.enabled !== false);
+
+    // Door types
+    config.doors?.forEach(door => {
+      if (doorTypes.length && !doorTypes.includes(door.typeSlug)) {
+        const fallback = doorTypes[0];
+        if (fallback) patches.push(() => store.updateDoor(door.id, { typeSlug: fallback }));
+      }
+    });
+
   const additionalMap = new Map(additionalSettings.map(f => [f.slug, f]));
 
   Object.entries(config.additionalFeatures).forEach(([slug]) => {
@@ -201,7 +221,7 @@ function ConfiguratorInner() {
   const sanitized = useRef(false);
 
   // ── Resizable sidebar (desktop only) ────────────────────────────────────
-  const [sidebarWidth, setSidebarWidth] = useState(340);
+  const [sidebarWidth, setSidebarWidth] = useState(460);
   const resizing = useRef(false);
 
   const startResize = useCallback((e: React.MouseEvent) => {
@@ -235,16 +255,42 @@ function ConfiguratorInner() {
   const config = useConfigStore(s => s.config);
   const applyPendingDimensions = useConfigStore(s => s.applyPendingDimensions);
   const removeGate = useConfigStore(s => s.removeGate);
+    const removeDoor = useConfigStore(s => s.removeDoor);
+  const setWidth  = useConfigStore(s => s.setWidth);
+  const setDepth  = useConfigStore(s => s.setDepth);
+  const setHeight = useConfigStore(s => s.setHeight);
+  const updateGate = useConfigStore(s => s.updateGate);
   const collisionDialog = useUIStore(s => s.collisionDialog);
   const closeCollisionDialog = useUIStore(s => s.closeCollisionDialog);
+  const expandGarageDialog = useUIStore(s => s.expandGarageDialog);
+  const closeExpandGarageDialog = useUIStore(s => s.closeExpandGarageDialog);
   const hasAdditionalServices = ((settings?.additionalFeatures ?? []).filter(feature => feature.enabled !== false).length ?? 0) > 0;
   const { width: W, height: H, depth: D } = config.dimensions;
 
   function handleCollisionConfirm() {
     if (!collisionDialog.pendingDimensions) return;
-    collisionDialog.conflicts.forEach(c => removeGate(c.id));
+    collisionDialog.conflicts.forEach(c => {
+      removeGate(c.id);
+      removeDoor(c.id);
+    });
     applyPendingDimensions(collisionDialog.pendingDimensions);
     closeCollisionDialog();
+  }
+
+  function handleExpandGarageConfirm() {
+    const { dimension, requiredMeters, gateId, pendingGateType, pendingGateWidth, pendingGateHeight } = expandGarageDialog;
+    if (!dimension) return;
+    if (dimension === 'width')  setWidth(requiredMeters);
+    if (dimension === 'depth')  setDepth(requiredMeters);
+    if (dimension === 'height') setHeight(requiredMeters);
+    if (gateId) {
+      updateGate(gateId, {
+        ...(pendingGateType  ? { type: pendingGateType as GateType } : {}),
+        ...(pendingGateWidth  != null ? { width:  pendingGateWidth  } : {}),
+        ...(pendingGateHeight != null ? { height: pendingGateHeight } : {}),
+      });
+    }
+    closeExpandGarageDialog();
   }
 
   if (!settings) {
@@ -266,6 +312,11 @@ function ConfiguratorInner() {
         conflicts={collisionDialog.conflicts}
         onConfirm={handleCollisionConfirm}
         onCancel={closeCollisionDialog}
+      />
+      <GarageExpandDialog
+        state={expandGarageDialog}
+        onConfirm={handleExpandGarageConfirm}
+        onCancel={closeExpandGarageDialog}
       />
       {/* ── 3D Viewport ───────────────────────────────────────────── */}
       <main className="order-1 relative h-[52dvh] min-h-[320px] w-full overflow-hidden lg:order-2 lg:h-full lg:flex-1">
@@ -312,6 +363,7 @@ function ConfiguratorInner() {
           <RoofPanel />
           <GatesPanel />
           <ConstructionPanel />
+                    <DoorsPanel />
           <GutterPanel />
           {hasAdditionalServices && <AdditionalServicesPanel />}
         </div>

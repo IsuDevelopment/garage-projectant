@@ -2,15 +2,17 @@
 
 import { useEffect, useMemo, useRef } from 'react';
 import { MaterialConfig, MaterialElement, MaterialType, RoofSlopeType } from '@/store/types';
-import { MATERIAL_LABELS } from '@/config/settings';
+import { getElementBinding, getElementColorPresets, MATERIAL_LABELS } from '@/config/settings';
 import { useSettingsContext } from '@/config/SettingsContext';
 import { ColorPicker } from '@/shared/components/ColorPicker';
+import type { ElementMaterialBinding } from '@/store/types';
 
 interface MaterialPickerProps {
   label: string;
   value: MaterialConfig | null;
   globalMaterial?: MaterialConfig;
   element: MaterialElement;
+  elementBinding?: ElementMaterialBinding;
   roofSlopeType?: RoofSlopeType;
   onChange: (m: MaterialConfig | null) => void;
   allowNull?: boolean; // allow "use global"
@@ -21,24 +23,29 @@ export function MaterialPicker({
   value,
   globalMaterial,
   element,
+  elementBinding,
   roofSlopeType,
   onChange,
   allowNull = false,
 }: MaterialPickerProps) {
   const effective = value ?? globalMaterial ?? { type: 'trapez' as MaterialType, color: '#c0c8d0' };
   const ref = useRef<HTMLDivElement>(null);
-  const { colors, materials } = useSettingsContext();
-  const shouldForceVerticalRoofTrapez = element === 'roof' && effective.type === 'trapez';
+  const settings = useSettingsContext();
+  const { colors, materials } = settings;
+  const binding = elementBinding ?? getElementBinding(settings, element);
+
+  // forcedSubValues for the currently-active material type (used in setSubOption)
+  const forcedSubValues = binding.materialOverrides?.[effective.type as MaterialType]?.forcedValues ?? {};
 
   const availableMaterials = useMemo(
     () => materials.filter(m => {
-      if (!m.appliesTo.includes(element)) return false;
+      if (!binding.allowedMaterials.includes(m.slug)) return false;
       if (element === 'roof' && roofSlopeType && m.allowedSlopes?.length) {
         return m.allowedSlopes.includes(roofSlopeType);
       }
       return true;
     }),
-    [materials, element, roofSlopeType],
+    [materials, binding.allowedMaterials, element, roofSlopeType],
   );
 
   const activeDef = useMemo(
@@ -47,19 +54,22 @@ export function MaterialPicker({
   );
 
   useEffect(() => {
-    // placeholder for click-outside (no dropdown currently open)
     return () => {};
   }, []);
 
   function setMaterialType(t: MaterialType) {
     const def = materials.find(m => m.slug === t);
+    const newOverride = binding.materialOverrides?.[t];
+    const newForced   = newOverride?.forcedValues ?? {};
+
     let subOptions = def?.subFeatures?.reduce((acc, sf) => {
       acc[sf.slug] = sf.default;
       return acc;
     }, {} as Record<string, string | number>);
 
-    if (element === 'roof' && t === 'trapez') {
-      (subOptions ??= {}).orientation = 'vertical';
+    // Apply binding forced values on top of defaults
+    if (Object.keys(newForced).length > 0) {
+      subOptions = { ...(subOptions ?? {}), ...newForced };
     }
 
     onChange({
@@ -76,7 +86,8 @@ export function MaterialPicker({
   }
 
   function setSubOption(slug: string, val: string | number) {
-    if (shouldForceVerticalRoofTrapez && slug === 'orientation') return;
+    // Ignore changes to sub-features that are forced by the element binding
+    if (forcedSubValues[slug] !== undefined) return;
 
     onChange({
       ...effective,
@@ -88,10 +99,17 @@ export function MaterialPicker({
   }
 
   const visibleSubFeatures = useMemo(() => {
-    if (!activeDef?.subFeatures?.length) return [];
-    if (!shouldForceVerticalRoofTrapez) return activeDef.subFeatures;
-    return activeDef.subFeatures.filter(sf => sf.slug !== 'orientation');
-  }, [activeDef?.subFeatures, shouldForceVerticalRoofTrapez]);
+    const subFeatures = activeDef?.subFeatures;
+    if (!subFeatures?.length) return [];
+    const override = binding.materialOverrides?.[effective.type as MaterialType];
+    const forced = override?.forcedValues;
+    const disabled = override?.disabledSubFeatures;
+    return subFeatures.filter(sf => {
+      if (disabled?.includes(sf.slug)) return false;
+      if (forced && sf.slug in forced) return false;
+      return true;
+    });
+  }, [activeDef?.subFeatures, binding.materialOverrides, effective.type]);
 
   return (
     <div className="flex flex-col gap-2" ref={ref}>
@@ -177,7 +195,7 @@ export function MaterialPicker({
       <ColorPicker
         value={effective.color}
         onChange={setColor}
-        presets={activeDef?.colorSet?.length ? activeDef.colorSet : colors.set}
+        presets={activeDef?.colorSet?.length ? activeDef.colorSet : getElementColorPresets(settings, element)}
         allowCustomColor={Boolean(activeDef?.allowColors) && colors.allowCustomColor}
         activeMaterial={effective.type}
       />

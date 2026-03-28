@@ -6,6 +6,7 @@ import { useUIStore } from '@/store/useUIStore';
 import GarageWalls from './GarageWalls';
 import GarageRoof from './GarageRoof';
 import GateModel from '@/features/gate/components/GateModel';
+import DoorModel from '@/features/doors/components/DoorModel';
 import GarageGutters from '@/features/gutters/components/GarageGutters';
 import GarageAdditionalFeatures from '@/features/additional-services/components/GarageAdditionalFeatures';
 
@@ -34,6 +35,15 @@ export default function GarageModel() {
           />
         </Suspense>
       ))}
+            {config.doors.map(door => (
+              <Suspense key={door.id} fallback={null}>
+                <DoorModel
+                  door={door}
+                  garageWidth={W}
+                  garageDepth={D}
+                />
+              </Suspense>
+            ))}
       <Suspense fallback={null}>
         <GarageGutters />
       </Suspense>

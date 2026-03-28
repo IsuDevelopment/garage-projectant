@@ -28,6 +28,11 @@ export interface MaterialSubFeature {
   default: string | number;
 }
 
+export interface MaterialSubFeatureDefinition extends MaterialSubFeature {
+  /** Optional surcharge used by future pricing engine */
+  price?: number;
+}
+
 export interface MaterialDefinition {
   /** Material feature slug; also used as texture/material key */
   slug: MaterialType;
@@ -42,8 +47,32 @@ export interface MaterialDefinition {
   isPremium?: boolean;
   allowColors: boolean;
   colorSet?: MaterialColorPreset[];
+  /** Legacy inline feature definitions (kept for compatibility) */
   subFeatures?: MaterialSubFeature[];
+  /** Preferred: references to global sub-feature registry */
+  subFeatureSlugs?: string[];
   price?: number;
+}
+
+export interface ColorDefinition {
+  slug: string;
+  name: string;
+  color: string;
+  price?: number;
+  isPremium?: boolean;
+  restrictToMaterials?: MaterialType[];
+}
+
+export interface ElementMaterialOverride {
+  disabledSubFeatures?: string[];
+  forcedValues?: Record<string, string | number>;
+}
+
+export interface ElementMaterialBinding {
+  allowedMaterials: MaterialType[];
+  /** Empty array means all configured global colors; false means colors disabled */
+  allowedColors?: string[] | false;
+  materialOverrides?: Partial<Record<MaterialType, ElementMaterialOverride>>;
 }
 
 // ─── Roof ─────────────────────────────────────────────────────────────────────
@@ -60,6 +89,22 @@ export type GateType = 'tilt' | 'double-wing' | 'sectional';
 export type WallSide = 'front' | 'back' | 'left' | 'right';
 export type OpenDirection = 'left' | 'right';
 
+export interface GateSizeSetCm {
+  width: number[];
+  height: number[];
+}
+
+export interface GateTypeDefinition {
+  slug: GateType;
+  name: string;
+  previewImage?: string;
+  isPremium?: boolean;
+  sizes: GateSizeSetCm;
+  allowedMaterials?: MaterialType[];
+  allowedColors?: string[] | false;
+  materialOverrides?: Partial<Record<MaterialType, ElementMaterialOverride>>;
+}
+
 export interface GateConfig {
   id: string;
   type: GateType;
@@ -70,6 +115,49 @@ export interface GateConfig {
   openDirection: OpenDirection;
   color: string; // hex
   material: MaterialConfig | null; // null = inherit from construction.material
+}
+
+// ─── Door ─────────────────────────────────────────────────────────────────────
+export interface DoorConfig {
+  id: string;
+  typeSlug: string;       // matches WallObjectTypeDefinition.slug ('single' | 'double')
+  wall: WallSide;
+  positionX: number;      // offset from left edge of the wall (metres)
+  width: number;          // metres
+  height: number;         // metres
+  color: string;          // hex
+  material: MaterialConfig | null; // null = inherit from construction.material
+}
+
+export type WallObjectCategory = 'door' | 'window';
+
+export interface WallObjectSizePresetCm {
+  width: number;
+  height: number;
+  name?: string;
+}
+
+export interface WallObjectTypeDefinition {
+  slug: string;
+  name: string;
+  category: WallObjectCategory;
+  previewImage?: string;
+  isPremium?: boolean;
+  sizes: WallObjectSizePresetCm[];
+  allowedMaterials?: MaterialType[];
+  allowedColors?: string[] | false;
+}
+
+export interface ConstructionSizesCm {
+  width: number[];
+  depth: number[];
+  height: number[];
+}
+
+export interface ConstructionDefaultsCm {
+  width: number;
+  depth: number;
+  height: number;
 }
 
 // ─── Construction ─────────────────────────────────────────────────────────────
@@ -118,6 +206,7 @@ export interface GarageConfig {
   dimensions: GarageDimensions;
   roof: RoofConfig;
   gates: GateConfig[];
+  doors: DoorConfig[];
   construction: ConstructionConfig;
   gutters: GutterConfig;
   feltRoof: RoofFeltConfig;

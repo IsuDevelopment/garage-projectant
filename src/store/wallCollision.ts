@@ -1,7 +1,7 @@
 import { GarageDimensions, WallSide } from './types';
 
-export const SIDE_MARGIN = 0.3; // min distance from wall edge
-export const GAP_BETWEEN = 0.2; // min gap between wall objects
+export const SIDE_MARGIN = 0.0; // objects can be mounted flush to wall edge
+export const GAP_BETWEEN = 0.05; // min gap between wall objects (5 cm)
 
 export const WALL_LABELS: Record<WallSide, string> = {
   front: 'przód',

@@ -51,3 +51,10 @@ Before finishing a task:
 - Sprite-based materials and configurable ground sprite.
 - Multiple gate types with dedicated visual details per type.
 - Zustand-driven config state shared between UI panels and 3D scene.
+
+## Skills
+Project-level skills live in `.github/skills/`. Load before starting work on any covered area.
+
+| Skill | Apply when |
+|---|---|
+| `.github/skills/wall-objects/SKILL.md` | Adding/editing wall-placed objects (gates, future windows/doors); position sliders; collision detection; dimension validation |

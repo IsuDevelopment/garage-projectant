@@ -7,7 +7,7 @@ import { RadioGroup } from '@/shared/components/RadioGroup';
 import { ConfigSlider } from '@/shared/components/ConfigSlider';
 import { MaterialPicker } from '@/features/materials/components/MaterialPicker';
 import { useConfigStore } from '@/store/useConfigStore';
-import { ROOF_SLOPE_LABELS } from '@/config/settings';
+import { getAvailableRoofSlopes, getRoofPitchLimits, ROOF_SLOPE_LABELS } from '@/config/settings';
 import { useSettingsContext } from '@/config/SettingsContext';
 import { RoofSlopeType } from '@/store/types';
 
@@ -31,9 +31,9 @@ export function RoofPanel() {
 
   const s = useSettingsContext();
   const pitchKey = roof.slopeType === 'double' || roof.slopeType === 'double-front-back' ? 'double' : 'single';
-  const roofPitch = s.roofPitch[pitchKey];
+  const roofPitch = getRoofPitchLimits(s, pitchKey);
 
-  const slopeOptions = s.availableRoofSlopes.map(v => ({
+  const slopeOptions = getAvailableRoofSlopes(s).map(v => ({
     value: v,
     label: ROOF_SLOPE_LABELS[v] ?? v,
     icon:  SLOPE_ICONS[v],

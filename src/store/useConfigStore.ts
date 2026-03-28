@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import { devtools, subscribeWithSelector } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
-import { AdditionalFeaturesConfig, GarageConfig, GarageDimensions, GateConfig, MaterialConfig, RoofSlopeType, ProfileType, WallSide, GutterConfig, RoofFeltConfig } from './types';
-import { DEFAULT_SETTINGS } from '@/config/settings';
+import { AdditionalFeaturesConfig, DoorConfig, GarageConfig, GarageDimensions, GateConfig, MaterialConfig, RoofSlopeType, ProfileType, WallSide, GutterConfig, RoofFeltConfig } from './types';
+import { DEFAULT_SETTINGS, cmToMeters, getConstructionDefaultCm, getDoorMaxCount, getDoorTypes, getGateMaxCount, getGateTypes, getRoofPitchLimits } from '@/config/settings';
 import {
   WALL_LABELS,
   WallObjectBounds,
@@ -18,8 +18,8 @@ const defaultGate: GateConfig = {
   id:            uuidv4(),
   type:          'tilt',
   wall:          'front',
-  width:         DEFAULT_SETTINGS.gate.width.default,
-  height:        DEFAULT_SETTINGS.gate.height.default,
+  width:         cmToMeters(getGateTypes(DEFAULT_SETTINGS)[0]?.sizes.width[0] ?? Math.round(DEFAULT_SETTINGS.gate.width.default * 100)),
+  height:        cmToMeters(getGateTypes(DEFAULT_SETTINGS)[0]?.sizes.height[0] ?? Math.round(DEFAULT_SETTINGS.gate.height.default * 100)),
   positionX:     0.3,
   openDirection: 'left',
   color:         '#c7c7c7',
@@ -66,19 +66,20 @@ const defaultAdditionalFeatures = buildDefaultAdditionalFeatures();
 
 const defaultConfig: GarageConfig = {
   dimensions: {
-    width:  DEFAULT_SETTINGS.dimensions.width.default,
-    height: DEFAULT_SETTINGS.dimensions.height.default,
-    depth:  DEFAULT_SETTINGS.dimensions.depth.default,
+    width:  cmToMeters(getConstructionDefaultCm(DEFAULT_SETTINGS, 'width')),
+    height: cmToMeters(getConstructionDefaultCm(DEFAULT_SETTINGS, 'height')),
+    depth:  cmToMeters(getConstructionDefaultCm(DEFAULT_SETTINGS, 'depth')),
   },
   roof: {
     slopeType: 'double',
-    pitch: DEFAULT_SETTINGS.roofPitch.double.default,
+    pitch: getRoofPitchLimits(DEFAULT_SETTINGS, 'double').default,
     material: null,
   },
   gates: [defaultGate],
+  doors: [],
   construction: {
     material: { ...defaultMaterial },
-    profileType: '30x40',
+    profileType: (DEFAULT_SETTINGS.construction?.profiles[0] ?? '30x40') as ProfileType,
     galvanized: false,
   },
   gutters:  { ...defaultGutters },
@@ -113,6 +114,13 @@ interface ConfigState {
   canAddGate: (wall: WallSide, newWidth: number, excludeId?: string) => boolean;
 
   // Gutters
+    // Doors
+    addDoor:    (wall?: WallSide) => DoorConfig | null;
+    updateDoor: (id: string, patch: Partial<Omit<DoorConfig, 'id'>>) => void;
+    removeDoor: (id: string) => void;
+    canAddDoor: (wall: WallSide, newWidth: number, excludeId?: string) => boolean;
+
+    // Gutters
   setGutters: (patch: Partial<GutterConfig>) => void;
 
   // Roof felt
@@ -127,14 +135,18 @@ interface ConfigState {
 
 // ─── Gate fit validation (delegates to wallCollision utility) ────────────────
 function gateFitsCheck(config: GarageConfig, wall: WallSide, extraWidth: number, excludeId?: string): boolean {
-  const existingWidths = config.gates
-    .filter(g => g.wall === wall && g.id !== excludeId)
-    .map(g => g.width);
+  const existingWidths = [
+    ...config.gates.filter(g => g.wall === wall && g.id !== excludeId).map(g => g.width),
+    ...config.doors.filter(d => d.wall === wall && d.id !== excludeId).map(d => d.width),
+  ];
   return gatesFitOnWall(config.dimensions, wall, existingWidths, extraWidth);
 }
 
-function toWallObjects(gates: GateConfig[]): WallObjectBounds[] {
-  return gates.map(g => ({ id: g.id, positionX: g.positionX, width: g.width, height: g.height, wall: g.wall }));
+function toWallObjects(gates: GateConfig[], doors: DoorConfig[]): WallObjectBounds[] {
+  return [
+    ...gates.map(g => ({ id: g.id, positionX: g.positionX, width: g.width, height: g.height, wall: g.wall })),
+    ...doors.map(d => ({ id: d.id, positionX: d.positionX, width: d.width, height: d.height, wall: d.wall })),
+  ];
 }
 
 function gateName(gate: GateConfig, index: number): string {
@@ -144,12 +156,19 @@ function gateName(gate: GateConfig, index: number): string {
   return `Brama ${index + 1} — ${typeLabels[gate.type] ?? gate.type} ${gate.width.toFixed(1)}×${gate.height.toFixed(1)}m (${WALL_LABELS[gate.wall]})`;
 }
 
+function doorName(door: DoorConfig, index: number): string {
+  const typeLabels: Record<string, string> = { single: 'Jednoskrzydłowe', double: 'Dwuskrzydłowe' };
+  return `Drzwi ${index + 1} — ${typeLabels[door.typeSlug] ?? door.typeSlug} ${door.width.toFixed(2)}×${door.height.toFixed(2)}m (${WALL_LABELS[door.wall]})`;
+}
+
 function buildCollisionConflicts(config: GarageConfig, newDimensions: GarageDimensions) {
-  const conflicts = findDimensionCollisions(toWallObjects(config.gates), newDimensions);
+  const conflicts = findDimensionCollisions(toWallObjects(config.gates, config.doors), newDimensions);
   return conflicts.map(c => {
     const idx   = config.gates.findIndex(g => g.id === c.id);
-    const gate  = config.gates[idx];
-    return { id: c.id, name: gateName(gate, idx) };
+    if (idx !== -1) return { id: c.id, name: gateName(config.gates[idx], idx) };
+    const dIdx = config.doors.findIndex(d => d.id === c.id);
+    if (dIdx !== -1) return { id: c.id, name: doorName(config.doors[dIdx], dIdx) };
+    return { id: c.id, name: `Obiekt (${c.wall})` };
   });
 }
 
@@ -198,7 +217,7 @@ export const useConfigStore = create<ConfigState>()(
       setRoofSlope: (type) =>
         set(s => {
           const isDoubleSlope = type === 'double' || type === 'double-front-back';
-          const limits = DEFAULT_SETTINGS.roofPitch[isDoubleSlope ? 'double' : 'single'];
+          const limits = getRoofPitchLimits(DEFAULT_SETTINGS, isDoubleSlope ? 'double' : 'single');
           let pitch: number;
           if (limits.mode === 'values') {
             // snap to nearest allowed value
@@ -225,15 +244,16 @@ export const useConfigStore = create<ConfigState>()(
       addGate: (wall = 'front') => {
         const { config } = get();
         const settings = DEFAULT_SETTINGS;
-        const newWidth  = settings.gate.width.default;
-        const newHeight = settings.gate.height.default;
+        const defaultGateType = getGateTypes(settings)[0];
+        const newWidth = cmToMeters(defaultGateType?.sizes.width[0] ?? Math.round(settings.gate.width.default * 100));
+        const newHeight = cmToMeters(defaultGateType?.sizes.height[0] ?? Math.round(settings.gate.height.default * 100));
 
-        if (config.gates.length >= settings.gate.maxCount) return null;
+        if (config.gates.length >= getGateMaxCount(settings)) return null;
         if (!gateFitsCheck(config, wall, newWidth)) return null;
 
         // Find first available slot on the wall
         const wallW   = wallWidthForSide(config.dimensions, wall);
-        const wallObjs = toWallObjects(config.gates.filter(g => g.wall === wall));
+        const wallObjs = toWallObjects(config.gates, config.doors).filter(o => o.wall === wall);
         const { min, max, blockedRanges } = computePositionBounds(wallW, newWidth, wallObjs, '__new__');
         if (max < min) return null;
         const posX = snapToNearestValid(min, blockedRanges, min, max);
@@ -269,6 +289,61 @@ export const useConfigStore = create<ConfigState>()(
 
       canAddGate: (wall, newWidth, excludeId) =>
         gateFitsCheck(get().config, wall, newWidth, excludeId),
+
+      addDoor: (wall = 'front') => {
+        const { config } = get();
+        const settings = DEFAULT_SETTINGS;
+        const firstType = getDoorTypes(settings)[0];
+        if (!firstType) return null;
+        const firstSize = firstType.sizes[0];
+        if (!firstSize) return null;
+
+        const newWidth  = cmToMeters(firstSize.width);
+        const newHeight = cmToMeters(firstSize.height);
+
+        if (config.doors.length >= getDoorMaxCount(settings)) return null;
+        if (!gateFitsCheck(config, wall, newWidth)) return null;
+
+        const wallW   = wallWidthForSide(config.dimensions, wall);
+        const wallObjs = toWallObjects(config.gates, config.doors).filter(o => o.wall === wall);
+        const { min, max, blockedRanges } = computePositionBounds(wallW, newWidth, wallObjs, '__new__');
+        if (max < min) return null;
+        const posX = snapToNearestValid(min, blockedRanges, min, max);
+
+        const door: DoorConfig = {
+          id: uuidv4(),
+          typeSlug: firstType.slug,
+          width: newWidth,
+          height: newHeight,
+          positionX: posX,
+          wall,
+          color: '#c0c8d0',
+          material: null,
+        };
+
+        set(s => ({ config: { ...s.config, doors: [...s.config.doors, door] } }));
+        return door;
+      },
+
+      updateDoor: (id, patch) =>
+        set(s => ({
+          config: {
+            ...s.config,
+            doors: s.config.doors.map(d => (d.id === id ? { ...d, ...patch } : d)),
+          },
+        })),
+
+      removeDoor: (id) =>
+        set(s => ({
+          config: { ...s.config, doors: s.config.doors.filter(d => d.id !== id) },
+        })),
+
+      canAddDoor: (wall, newWidth, excludeId) => {
+        const { config } = get();
+        const allObjs = toWallObjects(config.gates, config.doors.filter(d => d.id !== excludeId));
+        const onWall  = allObjs.filter(o => o.wall === wall).map(o => o.width);
+        return gatesFitOnWall(config.dimensions, wall, onWall, newWidth);
+      },
 
       setGutters: (patch) =>
         set(s => ({ config: { ...s.config, gutters: { ...s.config.gutters, ...patch } } })),

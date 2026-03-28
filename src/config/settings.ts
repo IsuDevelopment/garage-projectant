@@ -1,4 +1,18 @@
-import { MaterialType, MaterialDefinition, RoofSlopeType, GateType, ProfileType } from '@/store/types';
+import {
+  ColorDefinition,
+  ConstructionDefaultsCm,
+  ConstructionSizesCm,
+  ElementMaterialBinding,
+  GateTypeDefinition,
+  MaterialDefinition,
+  MaterialSubFeatureDefinition,
+  MaterialType,
+  RoofSlopeType,
+  GateType,
+  ProfileType,
+  MaterialElement,
+  WallObjectTypeDefinition,
+} from '@/store/types';
 import defaultSettingsJson from './default-settings.json';
 
 // ─── Dimension bounds ─────────────────────────────────────────────────────────
@@ -43,6 +57,35 @@ export interface ColorPreset {
 export interface ColorConfig {
   set: ColorPreset[];
   allowCustomColor: boolean;
+  /** New registry format used by per-element color allowlists */
+  definitions?: ColorDefinition[];
+}
+
+export interface ConstructionConfigSettings {
+  sizes: ConstructionSizesCm;
+  defaults: ConstructionDefaultsCm;
+  profiles: ProfileType[];
+}
+
+export interface RoofElementSettings extends ElementMaterialBinding {
+  availableSlopes: RoofSlopeType[];
+  pitch: Record<'single' | 'double', RoofPitchLimits>;
+}
+
+export interface ElementSettings {
+  walls: ElementMaterialBinding;
+  roof: RoofElementSettings;
+  gates: ElementMaterialBinding;
+}
+
+export interface GateSettings {
+  maxCount: number;
+  types: GateTypeDefinition[];
+}
+
+export interface DoorSettings {
+  maxCount: number;
+  types: WallObjectTypeDefinition[];
 }
 
 // ─── Configurator settings (static Phase 1, from API Phase 2) ─────────────────
@@ -65,6 +108,21 @@ export interface ConfiguratorSettings {
   roofPitch: Record<'single' | 'double', RoofPitchLimits>;
 
   gate: GateDimensionLimits;
+
+  /** New production constraints in centimetres (used by discrete sliders) */
+  construction?: ConstructionConfigSettings;
+
+  /** New per-element material bindings with overrides */
+  elements?: ElementSettings;
+
+  /** New gate catalog with per-type discrete size sets */
+  gates?: GateSettings;
+
+  /** Door catalog with per-type preset sizes */
+  doors?: DoorSettings;
+
+  /** Global sub-feature registry referenced by materials via slugs */
+  subFeatures?: MaterialSubFeatureDefinition[];
 
   customSprites?: Record<string, { name: string; url: string }>;
 
@@ -182,7 +240,7 @@ export interface VisualEnvironmentConfig {
 }
 
 // ─── Default settings (sourced from JSON for future API loading) ─────────────
-export const DEFAULT_SETTINGS: ConfiguratorSettings = defaultSettingsJson as ConfiguratorSettings;
+export const DEFAULT_SETTINGS: ConfiguratorSettings = defaultSettingsJson as unknown as ConfiguratorSettings;
 
 /** Convenience re-export for components that only need ground defaults. */
 export const DEFAULT_GROUND: GroundConfig = DEFAULT_SETTINGS.ground!;
@@ -201,6 +259,153 @@ export function getMaterialDefinition(
   slug: MaterialType,
 ): MaterialDefinition | undefined {
   return settings.materials.find(m => m.slug === slug);
+}
+
+export function cmToMeters(valueCm: number): number {
+  return valueCm / 100;
+}
+
+export function metersToCm(valueMeters: number): number {
+  return Math.round(valueMeters * 100);
+}
+
+export function getConstructionSizeValuesCm(
+  settings: ConfiguratorSettings,
+  axis: keyof ConstructionSizesCm,
+): number[] {
+  const values = settings.construction?.sizes?.[axis];
+  if (values?.length) return values;
+
+  if (axis === 'width') {
+    const { min, max, step } = settings.dimensions.width;
+    return buildRangeCm(min, max, step);
+  }
+  if (axis === 'depth') {
+    const { min, max, step } = settings.dimensions.depth;
+    return buildRangeCm(min, max, step);
+  }
+  const { min, max, step } = settings.dimensions.height;
+  return buildRangeCm(min, max, step);
+}
+
+export function getConstructionDefaultCm(
+  settings: ConfiguratorSettings,
+  axis: keyof ConstructionDefaultsCm,
+): number {
+  const explicit = settings.construction?.defaults?.[axis];
+  if (typeof explicit === 'number') return explicit;
+
+  if (axis === 'width') return Math.round(settings.dimensions.width.default * 100);
+  if (axis === 'depth') return Math.round(settings.dimensions.depth.default * 100);
+  return Math.round(settings.dimensions.height.default * 100);
+}
+
+export function getAvailableRoofSlopes(settings: ConfiguratorSettings): RoofSlopeType[] {
+  const fromElements = settings.elements?.roof.availableSlopes;
+  return fromElements?.length ? fromElements : settings.availableRoofSlopes;
+}
+
+export function getRoofPitchLimits(
+  settings: ConfiguratorSettings,
+  kind: 'single' | 'double',
+): RoofPitchLimits {
+  return settings.elements?.roof.pitch?.[kind] ?? settings.roofPitch[kind];
+}
+
+export function getAvailableProfiles(settings: ConfiguratorSettings): ProfileType[] {
+  const fromConstruction = settings.construction?.profiles;
+  return fromConstruction?.length ? fromConstruction : settings.availableProfiles;
+}
+
+export function getGateTypeDefinition(
+  settings: ConfiguratorSettings,
+  gateType: GateType,
+): GateTypeDefinition | undefined {
+  return settings.gates?.types.find(type => type.slug === gateType);
+}
+
+export function getGateTypes(settings: ConfiguratorSettings): GateTypeDefinition[] {
+  if (settings.gates?.types?.length) return settings.gates.types;
+
+  return settings.availableGateTypes.map(type => ({
+    slug: type,
+    name: GATE_TYPE_LABELS[type] ?? type,
+    sizes: {
+      width: buildRangeCm(settings.gate.width.min, settings.gate.width.max, settings.gate.width.step),
+      height: buildRangeCm(settings.gate.height.min, settings.gate.height.max, settings.gate.height.step),
+    },
+  }));
+}
+
+export function getGateMaxCount(settings: ConfiguratorSettings): number {
+  return settings.gates?.maxCount ?? settings.gate.maxCount;
+}
+
+export function getElementBinding(
+  settings: ConfiguratorSettings,
+  element: MaterialElement,
+): ElementMaterialBinding {
+  const fromNewSchema = settings.elements?.[element];
+  if (fromNewSchema) return fromNewSchema;
+
+  const allowedMaterials = settings.materials
+    .filter(material => material.appliesTo.includes(element))
+    .map(material => material.slug);
+
+  return {
+    allowedMaterials,
+    allowedColors: [],
+  };
+}
+
+export function getGlobalColorDefinitions(settings: ConfiguratorSettings): ColorDefinition[] {
+  if (settings.colors.definitions?.length) return settings.colors.definitions;
+  return settings.colors.set.map(color => ({
+    slug: color.slug,
+    name: color.name,
+    color: color.color,
+    price: color.price,
+    restrictToMaterials: color.textures,
+  }));
+}
+
+export function getElementColorPresets(
+  settings: ConfiguratorSettings,
+  element: MaterialElement,
+): ColorPreset[] {
+  const binding = getElementBinding(settings, element);
+  const global = getGlobalColorDefinitions(settings);
+  if (binding.allowedColors === false) return [];
+
+  const allowed = binding.allowedColors;
+  const list = allowed && allowed.length
+    ? global.filter(color => allowed.includes(color.slug))
+    : global;
+
+  return list.map(color => ({
+    slug: color.slug,
+    name: color.name,
+    color: color.color,
+    textures: color.restrictToMaterials,
+    price: color.price,
+  }));
+}
+
+function buildRangeCm(minMeters: number, maxMeters: number, stepMeters: number): number[] {
+  const min = Math.round(minMeters * 100);
+  const max = Math.round(maxMeters * 100);
+  const step = Math.max(1, Math.round(stepMeters * 100));
+  const values: number[] = [];
+
+  for (let value = min; value <= max; value += step) {
+    values.push(value);
+  }
+
+  if (values[values.length - 1] !== max) {
+    values.push(max);
+  }
+
+  return values;
 }
 
 // ─── Roof slope display info ──────────────────────────────────────────────────
@@ -225,3 +430,19 @@ export const PROFILE_LABELS: Record<string, string> = {
   '30x30': '30×30 mm',
   '30x40': '30×40 mm',
 };
+
+// ─── Door helpers ─────────────────────────────────────────────────────────────
+export function getDoorTypes(settings: ConfiguratorSettings): WallObjectTypeDefinition[] {
+  return settings.doors?.types ?? [];
+}
+
+export function getDoorTypeDefinition(
+  settings: ConfiguratorSettings,
+  typeSlug: string,
+): WallObjectTypeDefinition | undefined {
+  return settings.doors?.types.find(t => t.slug === typeSlug);
+}
+
+export function getDoorMaxCount(settings: ConfiguratorSettings): number {
+  return settings.doors?.maxCount ?? 4;
+}

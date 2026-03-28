@@ -8,7 +8,7 @@ import { ConfigSlider } from '@/shared/components/ConfigSlider';
 import { MaterialPicker } from '@/features/materials/components/MaterialPicker';
 import { useConfigStore } from '@/store/useConfigStore';
 import { useUIStore } from '@/store/useUIStore';
-import { GATE_TYPE_LABELS } from '@/config/settings';
+import { cmToMeters, getConstructionSizeValuesCm, getGateMaxCount, getGateTypeDefinition, getGateTypes, metersToCm } from '@/config/settings';
 import { useSettingsContext } from '@/config/SettingsContext';
 import { GateConfig, GateType, OpenDirection, WallSide } from '@/store/types';
 import {
@@ -46,18 +46,23 @@ function GateEditor({ gate }: { gate: GateConfig }) {
   const globalMat    = useConfigStore(s => s.config.construction.material);
   const dimensions   = useConfigStore(s => s.config.dimensions);
   const gates        = useConfigStore(s => s.config.gates);
-  const { setSelectedGate } = useUIStore();
+  const { setSelectedGate, showExpandGarageDialog } = useUIStore();
 
   const [open, setOpen] = useState(true);
 
   const gs     = useSettingsContext();
+  const gateTypes = getGateTypes(gs);
   const limits = gs.gate;
 
-  const gateTypeOptions = gs.availableGateTypes.map(v => ({
-    value: v,
-    label: GATE_TYPE_LABELS[v] ?? v,
-    icon:  GATE_TYPE_ICONS[v],
+  const gateTypeOptions = gateTypes.map(v => ({
+    value: v.slug,
+    label: v.name,
+    icon:  GATE_TYPE_ICONS[v.slug],
   }));
+
+  const gateTypeDef = getGateTypeDefinition(gs, gate.type);
+  const widthValuesMeters = (gateTypeDef?.sizes.width ?? []).map(cmToMeters);
+  const heightValuesCm = gateTypeDef?.sizes.height ?? [];
 
   const openDirOptions: { value: OpenDirection; label: string; icon: string }[] = [
     { value: 'left',  label: 'Lewo',  icon: '←' },
@@ -73,8 +78,87 @@ function GateEditor({ gate }: { gate: GateConfig }) {
     computePositionBounds(wallW, gate.width, wallObjs, gate.id);
 
   // ── Max slider bounds ──────────────────────────────────────────────────
-  const maxWidth  = Math.min(limits.width.max,  wallW - 0.6);
+  const maxWidth  = Math.min(limits.width.max, wallW);
   const maxHeight = Math.min(limits.height.max, dimensions.height - 0.2);
+  const gateHeightCm = metersToCm(gate.height);
+
+  const allowedWidthValues = widthValuesMeters.filter(w => w <= maxWidth);
+  const allowedHeightValuesCm = heightValuesCm.filter(hCm => cmToMeters(hCm) <= maxHeight);
+
+  const widthSliderValues = allowedWidthValues.length
+    ? allowedWidthValues
+    : [Math.min(maxWidth, Math.max(0.6, gate.width))];
+  const heightSliderValuesCm = allowedHeightValuesCm.length
+    ? allowedHeightValuesCm
+    : [metersToCm(Math.min(maxHeight, Math.max(1.0, gate.height)))];
+
+  function onTypeChange(nextType: GateType) {
+    const nextTypeDef = getGateTypeDefinition(gs, nextType);
+    const allWidthsMeters = (nextTypeDef?.sizes.width ?? []).map(cmToMeters);
+    const allHeightsCm    = nextTypeDef?.sizes.height ?? [];
+
+    const fittingWidths    = allWidthsMeters.filter(w => w <= maxWidth);
+    const fittingHeightsCm = allHeightsCm.filter(hCm => cmToMeters(hCm) <= maxHeight);
+
+    // Gate fits — apply directly
+    if (fittingWidths.length > 0 && fittingHeightsCm.length > 0) {
+      updateGate(gate.id, {
+        type: nextType,
+        width:  nearestNumber(fittingWidths, gate.width),
+        height: cmToMeters(nearestNumber(fittingHeightsCm, gateHeightCm)),
+      });
+      return;
+    }
+
+    // Gate requires larger garage — propose expansion
+    const minWidthMeters  = allWidthsMeters[0];
+    const minHeightCm     = allHeightsCm[0] ?? metersToCm(gate.height);
+    const minHeightMeters = cmToMeters(minHeightCm);
+
+    const needsWidthExpand  = fittingWidths.length === 0 && minWidthMeters != null;
+    const needsHeightExpand = fittingHeightsCm.length === 0;
+
+    const dimensionAxis = (gate.wall === 'front' || gate.wall === 'back') ? 'width' : 'depth';
+    const currentWallW  = dimensionAxis === 'width' ? dimensions.width : dimensions.depth;
+
+    if (needsWidthExpand) {
+      const requiredWallW     = minWidthMeters + SIDE_MARGIN * 2;
+      const constructionSizes = getConstructionSizeValuesCm(gs, dimensionAxis).map(cmToMeters);
+      const requiredGarageW   = constructionSizes.find(v => v >= requiredWallW) ?? requiredWallW;
+
+      // Pick a height that fits in the expanded garage (height unchanged)
+      const pendingH = fittingHeightsCm.length > 0
+        ? cmToMeters(nearestNumber(fittingHeightsCm, gateHeightCm))
+        : minHeightMeters;
+
+      showExpandGarageDialog({
+        dimension:         dimensionAxis as 'width' | 'depth',
+        requiredMeters:    requiredGarageW,
+        currentMeters:     currentWallW,
+        gateId:            gate.id,
+        pendingGateType:   nextType,
+        pendingGateWidth:  minWidthMeters,
+        pendingGateHeight: pendingH,
+      });
+      return;
+    }
+
+    if (needsHeightExpand) {
+      const requiredH      = minHeightMeters + 0.2;
+      const constructionH  = getConstructionSizeValuesCm(gs, 'height').map(cmToMeters);
+      const requiredGarageH = constructionH.find(v => v >= requiredH) ?? requiredH;
+
+      showExpandGarageDialog({
+        dimension:         'height',
+        requiredMeters:    requiredGarageH,
+        currentMeters:     dimensions.height,
+        gateId:            gate.id,
+        pendingGateType:   nextType,
+        pendingGateWidth:  fittingWidths.length > 0 ? nearestNumber(fittingWidths, gate.width) : minWidthMeters,
+        pendingGateHeight: minHeightMeters,
+      });
+    }
+  }
 
   function tryUpdateWidth(w: number) {
     const { min, max, blockedRanges: br } =
@@ -136,7 +220,7 @@ function GateEditor({ gate }: { gate: GateConfig }) {
           <RadioGroup
             value={gate.type}
             options={gateTypeOptions}
-            onChange={v => updateGate(gate.id, { type: v })}
+            onChange={onTypeChange}
             columns={3}
           />
 
@@ -154,20 +238,16 @@ function GateEditor({ gate }: { gate: GateConfig }) {
           <ConfigSlider
             label={limits.width.label}
             value={gate.width}
-            min={limits.width.min}
-            max={maxWidth}
-            step={limits.width.step}
+            values={widthSliderValues}
             unit={limits.width.unit}
             onChange={tryUpdateWidth}
           />
           <ConfigSlider
-            label={limits.height.label}
-            value={gate.height}
-            min={limits.height.min}
-            max={maxHeight}
-            step={limits.height.step}
-            unit={limits.height.unit}
-            onChange={v => updateGate(gate.id, { height: v })}
+            label={`${limits.height.label} (cm)`}
+            value={gateHeightCm}
+            values={heightSliderValuesCm}
+            unit="cm"
+            onChange={hCm => updateGate(gate.id, { height: cmToMeters(hCm) })}
           />
 
           {/* Position slider — only useful when there is room to move */}
@@ -212,8 +292,11 @@ export function GatesPanel() {
   const addGate  = useConfigStore(s => s.addGate);
   const canAdd   = useConfigStore(s => s.canAddGate);
   const settings = useSettingsContext();
+  const gateTypes = getGateTypes(settings);
+  const maxCount = getGateMaxCount(settings);
+  const defaultGateWidth = cmToMeters(gateTypes[0]?.sizes.width[0] ?? Math.round(settings.gate.width.default * 100));
 
-  const canAddAnother = gates.length < settings.gate.maxCount && canAdd('front', settings.gate.width.default);
+  const canAddAnother = gates.length < maxCount && canAdd('front', defaultGateWidth);
 
   return (
     <AccordionSection title="Bramy" icon={<DoorOpen size={16} />} maxBodyHeight={480}>
@@ -236,14 +319,23 @@ export function GatesPanel() {
         >
           <Plus size={16} />
           Dodaj bramę
-          {!canAddAnother && gates.length >= settings.gate.maxCount && (
-            <span className="text-xs">(max {settings.gate.maxCount})</span>
+          {!canAddAnother && gates.length >= maxCount && (
+            <span className="text-xs">(max {maxCount})</span>
           )}
-          {!canAddAnother && gates.length < settings.gate.maxCount && (
+          {!canAddAnother && gates.length < maxCount && (
             <span className="text-xs">(za mało miejsca)</span>
           )}
         </button>
       </div>
     </AccordionSection>
   );
+}
+
+function nearestNumber(values: number[], target: number): number {
+  return values.reduce((best, current) => {
+    if (Math.abs(current - target) < Math.abs(best - target)) {
+      return current;
+    }
+    return best;
+  });
 }
