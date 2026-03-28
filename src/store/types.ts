@@ -97,6 +97,15 @@ export interface RoofFeltConfig {
   enabled: boolean; // whether felt underlay is selected by user
 }
 
+// ─── Additional Services ────────────────────────────────────────────────────
+export interface AdditionalFeatureSelection {
+  enabled: boolean;
+  selectedOptionSlug: string | null;
+  optionColor: string;
+}
+
+export type AdditionalFeaturesConfig = Record<string, AdditionalFeatureSelection>;
+
 // ─── Dimensions ───────────────────────────────────────────────────────────────
 export interface GarageDimensions {
   width: number; // X axis
@@ -112,4 +121,5 @@ export interface GarageConfig {
   construction: ConstructionConfig;
   gutters: GutterConfig;
   feltRoof: RoofFeltConfig;
+  additionalFeatures: AdditionalFeaturesConfig;
 }

@@ -105,8 +105,8 @@
     "backgroundColor": "#8fd8ff",
     "sky": {
       "radius": 280,
-      "topColor": "#bfdcf7",
-      "midColor": "#8bcbfa",
+      "topColor": "#cfecf7",
+      "midColor": "#a0d9ef",
       "horizonColor": "#bfe8ff"
     },
     "clouds": [
@@ -169,5 +169,44 @@
     "enabled": true,
     "description": "Stosuje się w garażach, aby zapobiegać skraplaniu się wilgoci na wewnętrznej stronie blachy, co chroni przed korozją i tworzeniem się pleśni.",
     "previewImage": "/textures/felt-preview.jpg"
-  }
+  },
+
+  "additionalFeatures": [
+    {
+      "slug": "anchoring",
+      "name": "Kotwiczenie",
+      "enabled": true,
+      "price": 0,
+      "description": "Dodatkowe przygotowanie podłoża pod montaż i stabilizację garażu.",
+      "details": "Usługa kotwiczenia obejmuje przygotowanie i wykonanie podparcia pod konstrukcję garażu. Zakres zależy od wybranej opcji i warunków lokalnych. Wizualizacja ma charakter poglądowy i może nie odwzorowywać dokładnej liczby elementów.",
+      "options": [
+        {
+          "slug": "concrete-slab",
+          "name": "Wylewka betonowa",
+          "price": 0,
+          "info": "Jednolita płyta betonowa pod całym garażem.",
+          "allowColor": false,
+          "defaultColor": "#9ca3af"
+        },
+        {
+          "slug": "concrete-foundation",
+          "name": "Beton fundamentowy",
+          "price": 0,
+          "info": "Wizualizacja poglądowa, może nie odzwierciedlać ilości faktycznej elementów.",
+          "allowColor": false,
+          "defaultColor": "#7b838e"
+        },
+        {
+          "slug": "footings",
+          "name": "Stopy betonowe",
+          "price": 0,
+          "info": "Wizualizacja poglądowa, może nie odzwierciedlać ilości faktycznej elementów.",
+          "allowColor": false,
+          "defaultColor": "#8f969f",
+          "spacingMin": 1.5,
+          "spacingMax": 2.0
+        }
+      ]
+    }
+  ]
 }

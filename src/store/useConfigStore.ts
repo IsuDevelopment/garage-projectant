@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { devtools, subscribeWithSelector } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
-import { GarageConfig, GateConfig, MaterialConfig, RoofSlopeType, ProfileType, WallSide, GutterConfig, RoofFeltConfig } from './types';
+import { AdditionalFeaturesConfig, GarageConfig, GateConfig, MaterialConfig, RoofSlopeType, ProfileType, WallSide, GutterConfig, RoofFeltConfig } from './types';
 import { DEFAULT_SETTINGS } from '@/config/settings';
 
 const defaultGate: GateConfig = {
@@ -40,6 +40,20 @@ const defaultFeltRoof: RoofFeltConfig = {
   enabled: false,
 };
 
+function buildDefaultAdditionalFeatures(): AdditionalFeaturesConfig {
+  return (DEFAULT_SETTINGS.additionalFeatures ?? []).reduce((acc, feature) => {
+    const firstOption = feature.options?.[0];
+    acc[feature.slug] = {
+      enabled: false,
+      selectedOptionSlug: firstOption?.slug ?? null,
+      optionColor: firstOption?.defaultColor ?? '#8f969f',
+    };
+    return acc;
+  }, {} as AdditionalFeaturesConfig);
+}
+
+const defaultAdditionalFeatures = buildDefaultAdditionalFeatures();
+
 const defaultConfig: GarageConfig = {
   dimensions: {
     width:  DEFAULT_SETTINGS.dimensions.width.default,
@@ -59,6 +73,7 @@ const defaultConfig: GarageConfig = {
   },
   gutters:  { ...defaultGutters },
   feltRoof: { ...defaultFeltRoof },
+  additionalFeatures: { ...defaultAdditionalFeatures },
 };
 
 // ─── Store interface ───────────────────────────────────────────────────────────
@@ -91,6 +106,12 @@ interface ConfigState {
 
   // Roof felt
   setFeltRoof: (patch: Partial<RoofFeltConfig>) => void;
+
+  // Additional services
+  setAdditionalFeature: (
+    slug: string,
+    patch: Partial<AdditionalFeaturesConfig[string]>,
+  ) => void;
 }
 
 // ─── Gate fit validation ──────────────────────────────────────────────────────
@@ -203,6 +224,27 @@ export const useConfigStore = create<ConfigState>()(
 
       setFeltRoof: (patch) =>
         set(s => ({ config: { ...s.config, feltRoof: { ...s.config.feltRoof, ...patch } } })),
+
+      setAdditionalFeature: (slug, patch) =>
+        set(s => {
+          const current = s.config.additionalFeatures[slug] ?? {
+            enabled: false,
+            selectedOptionSlug: null,
+            optionColor: '#8f969f',
+          };
+          return {
+            config: {
+              ...s.config,
+              additionalFeatures: {
+                ...s.config.additionalFeatures,
+                [slug]: {
+                  ...current,
+                  ...patch,
+                },
+              },
+            },
+          };
+        }),
     })),
     { name: 'GarageConfig' },
   ),

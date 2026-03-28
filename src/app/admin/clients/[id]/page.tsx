@@ -3,14 +3,19 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { CopyButton } from '@/features/admin/components/CopyButton';
 import { FeatureToggleGrid } from '@/features/admin/components/FeatureToggleGrid';
+import { VisualSettingsEditor } from '@/features/admin/components/VisualSettingsEditor';
+import { resolveVisualSettings } from '@/config/visual-settings';
 
 export default async function ClientDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
-  const client = await prisma.client.findUnique({
+  const [client, globalSettings] = await Promise.all([
+    prisma.client.findUnique({
     where: { id },
     include: { clientFeatures: { include: { feature: true } } },
-  });
+    }),
+    prisma.globalSettings.findUnique({ where: { id: 'default' } }),
+  ]);
   if (!client) notFound();
 
   // Get all features and merge with client-specific state
@@ -28,6 +33,8 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
 
   const enabledCount = client.clientFeatures.filter(cf => cf.enabled).length;
   const previewUrl = `${process.env.NEXTAUTH_URL ?? 'http://localhost:3000'}/?key=${client.apiKey}`;
+  const effectiveVisualSettings = resolveVisualSettings(globalSettings?.visualSettings, client.visualSettings);
+  const isInheritedVisual = client.visualSettings == null;
 
   return (
     <div className="p-4 md:p-8">
@@ -65,9 +72,20 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Feature toggles — main column */}
-        <div className="xl:col-span-2 bg-slate-900 border border-slate-800 rounded-xl p-4 md:p-6">
-          <h2 className="font-semibold text-white mb-5">Feature&apos;y konfiguratora</h2>
-          <FeatureToggleGrid clientId={client.id} features={featuresWithState} />
+        <div className="xl:col-span-2 space-y-6">
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 md:p-6">
+            <h2 className="font-semibold text-white mb-5">Feature&apos;y konfiguratora</h2>
+            <FeatureToggleGrid clientId={client.id} features={featuresWithState} />
+          </div>
+
+          <VisualSettingsEditor
+            title="Ustawienia wizualne klienta"
+            description="To nadpisanie działa tylko dla tego klienta. Jeśli wyczyścisz override, klient odziedziczy ustawienia globalne."
+            endpoint={`/api/admin/clients/${client.id}/settings`}
+            initialSettings={effectiveVisualSettings}
+            resetLabel="Przywróć dziedziczenie z ustawień globalnych"
+            inheritedHint={isInheritedVisual ? 'Klient aktualnie dziedziczy ustawienia globalne.' : 'Klient ma własne ustawienia wizualne.'}
+          />
         </div>
 
         {/* Side info */}

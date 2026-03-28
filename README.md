@@ -169,6 +169,67 @@ Wygląd nieba, kolor tła, pozycje chmur i rozkład drzew są definiowane w `src
 
 ---
 
+## Uslugi dodatkowe
+
+Dodatkowe uslugi sa konfigurowane przez JSON pod kluczem `additionalFeatures`.
+
+Sekcja `Uslugi dodatkowe` w sidebarze wyswietla sie tylko wtedy, gdy tablica zawiera co najmniej jeden feature z `enabled: true`.
+
+### Struktura konfiguracji
+
+```json
+"additionalFeatures": [
+  {
+    "slug": "anchoring",
+    "name": "Kotwiczenie",
+    "enabled": true,
+    "price": 0,
+    "description": "Krotki opis pod opcja.",
+    "details": "Dlugi opis wyswietlany w popupie po kliknieciu 'Poznaj szczegoly'.",
+    "options": [
+      {
+        "slug": "concrete-slab",
+        "name": "Wylewka betonowa",
+        "price": 0,
+        "info": "Tekst pod selectem po wyborze opcji.",
+        "allowColor": false,
+        "defaultColor": "#9ca3af"
+      },
+      {
+        "slug": "concrete-foundation",
+        "name": "Beton fundamentowy",
+        "price": 0,
+        "info": "Wizualizacja pogladowa...",
+        "allowColor": false,
+        "defaultColor": "#7b838e"
+      },
+      {
+        "slug": "footings",
+        "name": "Stopy betonowe",
+        "price": 0,
+        "info": "Wizualizacja pogladowa...",
+        "allowColor": false,
+        "defaultColor": "#8f969f",
+        "spacingMin": 1.5,
+        "spacingMax": 2.0
+      }
+    ]
+  }
+]
+```
+
+### Zachowanie 3D dla opcji `anchoring`
+
+| Opcja | Render 3D |
+|---|---|
+| `concrete-slab` | Plyta pod garazem: szerokosc i glebokosc + 10 cm, wysokosc 10 cm |
+| `concrete-foundation` | Jak wyzej, ale zwykle ciemniejszy kolor |
+| `footings` | Plyty 40x40x10 cm wokol obrysu: rogi + rowny rozstaw co ok. 1.5-2.0 m (konfigurowalne przez `spacingMin`/`spacingMax`) |
+
+Wszystkie elementy korzystaja z lekkiej, proceduralnej tekstury chropowatego betonu.
+
+---
+
 ## Learn More
 
 - [Next.js Documentation](https://nextjs.org/docs)

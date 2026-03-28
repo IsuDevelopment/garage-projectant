@@ -79,6 +79,9 @@ export interface ConfiguratorSettings {
 
   /** Roof felt underlay feature — optional; absent = feature hidden */
   roofFelt?: RoofFeltSettings;
+
+  /** Additional paid services rendered in a dedicated section when available */
+  additionalFeatures?: AdditionalFeatureDefinition[];
 }
 
 // ─── Roof Felt feature settings ─────────────────────────────────────────────
@@ -89,6 +92,29 @@ export interface RoofFeltSettings {
   description: string;
   /** Optional preview image path (from /public/), displayed next to the toggle */
   previewImage?: string;
+}
+
+// ─── Additional services feature settings ──────────────────────────────────
+export interface AdditionalFeatureOption {
+  slug: string;
+  name: string;
+  price?: number;
+  info?: string;
+  defaultColor?: string;
+  allowColor?: boolean;
+  /** Optional spacing range for repeated support elements (in metres). */
+  spacingMin?: number;
+  spacingMax?: number;
+}
+
+export interface AdditionalFeatureDefinition {
+  slug: string;
+  name: string;
+  enabled?: boolean;
+  price?: number;
+  description?: string;
+  details?: string;
+  options?: AdditionalFeatureOption[];
 }
 
 // ─── Ground config ────────────────────────────────────────────────────────────

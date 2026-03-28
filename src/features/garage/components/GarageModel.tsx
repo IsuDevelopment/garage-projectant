@@ -7,6 +7,7 @@ import GarageWalls from './GarageWalls';
 import GarageRoof from './GarageRoof';
 import GateModel from '@/features/gate/components/GateModel';
 import GarageGutters from '@/features/gutters/components/GarageGutters';
+import GarageAdditionalFeatures from '@/features/additional-services/components/GarageAdditionalFeatures';
 
 export default function GarageModel() {
   const config   = useConfigStore(s => s.config);
@@ -35,6 +36,9 @@ export default function GarageModel() {
       ))}
       <Suspense fallback={null}>
         <GarageGutters />
+      </Suspense>
+      <Suspense fallback={null}>
+        <GarageAdditionalFeatures />
       </Suspense>
     </group>
   );

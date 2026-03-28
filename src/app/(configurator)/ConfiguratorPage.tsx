@@ -8,6 +8,7 @@ import { RoofPanel } from '@/features/roof/components/RoofPanel';
 import { GatesPanel } from '@/features/gate/components/GatesPanel';
 import { ConstructionPanel } from '@/features/construction/components/ConstructionPanel';
 import { GutterPanel } from '@/features/gutters/components/GutterPanel';
+import { AdditionalServicesPanel } from '@/features/additional-services/components/AdditionalServicesPanel';
 import { useConfigStore } from '@/store/useConfigStore';
 import { useSettings } from '@/config/useSettings';
 import { SettingsProvider } from '@/config/SettingsContext';
@@ -58,6 +59,8 @@ function sanitizeConfigToSettings(settings: ConfiguratorSettings) {
     }
     return color;
   };
+
+  const setAdditionalFeature = store.setAdditionalFeature;
 
   // Roof slope
   if (!settings.availableRoofSlopes.includes(config.roof.slopeType)) {
@@ -148,6 +151,44 @@ function sanitizeConfigToSettings(settings: ConfiguratorSettings) {
     }
   });
 
+  // Additional services
+  const additionalSettings = (settings.additionalFeatures ?? []).filter(feature => feature.enabled !== false);
+  const additionalMap = new Map(additionalSettings.map(f => [f.slug, f]));
+
+  Object.entries(config.additionalFeatures).forEach(([slug]) => {
+    if (!additionalMap.has(slug)) {
+      patches.push(() => setAdditionalFeature(slug, { enabled: false }));
+    }
+  });
+
+  additionalSettings.forEach(feature => {
+    const current = config.additionalFeatures[feature.slug];
+    const firstOption = feature.options?.[0];
+    const selectedSlug = current?.selectedOptionSlug ?? firstOption?.slug ?? null;
+    const selectedOption = feature.options?.find(o => o.slug === selectedSlug) ?? firstOption;
+
+    if (!current) {
+      patches.push(() => setAdditionalFeature(feature.slug, {
+        enabled: false,
+        selectedOptionSlug: selectedOption?.slug ?? null,
+        optionColor: selectedOption?.defaultColor ?? '#8f969f',
+      }));
+      return;
+    }
+
+    if (selectedSlug && !feature.options?.some(o => o.slug === selectedSlug)) {
+      patches.push(() => setAdditionalFeature(feature.slug, {
+        selectedOptionSlug: selectedOption?.slug ?? null,
+      }));
+    }
+
+    if (selectedOption?.allowColor === false && current.optionColor !== (selectedOption.defaultColor ?? '#8f969f')) {
+      patches.push(() => setAdditionalFeature(feature.slug, {
+        optionColor: selectedOption.defaultColor ?? '#8f969f',
+      }));
+    }
+  });
+
   patches.forEach(fn => fn());
 }
 
@@ -190,6 +231,7 @@ function ConfiguratorInner() {
   }, [settings]);
 
   const config = useConfigStore(s => s.config);
+  const hasAdditionalServices = ((settings?.additionalFeatures ?? []).filter(feature => feature.enabled !== false).length ?? 0) > 0;
   const { width: W, height: H, depth: D } = config.dimensions;
 
   if (!settings) {
@@ -252,6 +294,7 @@ function ConfiguratorInner() {
           <GatesPanel />
           <ConstructionPanel />
           <GutterPanel />
+          {hasAdditionalServices && <AdditionalServicesPanel />}
         </div>
 
         {/* Footer CTA */}
