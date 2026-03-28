@@ -228,6 +228,13 @@ Sekcja `Uslugi dodatkowe` w sidebarze wyswietla sie tylko wtedy, gdy tablica zaw
 
 Wszystkie elementy korzystaja z lekkiej, proceduralnej tekstury chropowatego betonu.
 
+
+## DB: 
+- Baza to PostgreSQL, zarządzana przez Prisma ORM.
+- Schemat znajduje się w `prisma/schema.prisma` i zawiera tabele dla klientów, ustawień, feature'ów i planów subskrypcyjnych.
+- `prisma/seed.ts` zawiera logikę seedowania bazy, w tym tworzenie super admina i wypełnianie katalogu master feature'ów.
+- uzyj np https://neon.com do hostowania bazy w chmurze (Neon oferuje darmowy plan z PostgreSQL serverless, idealny dla tego projektu).
+
 ---
 
 ## Learn More
